@@ -1,6 +1,21 @@
 ﻿# coding: utf-8
 # おむつ交換Bot
 require 'yaml'
+require 'twitter'
+
+# twitterクライアントを生成する
+def createclient()
+	tsettings = YAML.load_file("tsettings.yml")
+
+	client = Twitter::REST::Client.new do |config|
+		config.consumer_key        = tsettings["consumer_key"]
+		config.consumer_secret     = tsettings["consumer_secret"]
+		config.access_token        = tsettings["access_token"]
+		config.access_token_secret = tsettings["access_token_secret"]
+	end
+
+	return client
+end
 
 class StsBase
 	# 尿意の最大増加値
@@ -10,7 +25,7 @@ class StsBase
 	ENDURANCEBORDER = 60
 
 	# お漏らしの閾値
-	LEAKBORDER = 65
+	LEAKBORDER = 75
 
 	# 初期化
 	def initialize()
@@ -26,6 +41,10 @@ class StsBase
 	def speak(words)
 		word = words[@modename].sample
 		puts (word.encode("CP932"))
+
+		# tweetする
+		client = createclient
+		client.update(word)
 	end
 
 	# 行動セット呼び出し
@@ -84,6 +103,9 @@ class StsEndurance < StsBase
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
+
+			# 漏らした時刻を更新する
+			sts["leaktime"] = Time.now
 		end
 
 		# 自発的発言
@@ -127,6 +149,9 @@ class StsWet < StsBase
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
+
+			# 漏らした時刻を更新する
+			sts["leaktime"] = Time.now
 		end
 
 		# 自発的発言
@@ -176,7 +201,8 @@ class DiaperChangeBot
 		if stsfile == nil || !File.exist?(stsfile) then
 			@status = {
 				"volume" => 0,
-				"wetsts" => StsFine.new
+				"wetsts" => StsFine.new,
+				"leaktime" => Time.now
 			}
 		else
 			File.open(stsfile, "r") do |f|
