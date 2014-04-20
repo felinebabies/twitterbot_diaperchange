@@ -81,10 +81,15 @@ class StsFine < StsBase
 		if(sts["volume"] >= ENDURANCEBORDER) then
 			# 尿意が一定以上ならがまん状態にする
 			sts["wetsts"] = StsEndurance.new
-		end
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+			# 状態変更時は強制発言
+			sts["wetsts"].speak(words)
+		else
+			# 確率で自発的発言
+			if rand(20) == 0 then
+				sts["wetsts"].speak(words)
+			end
+		end
 	end
 end
 
@@ -106,10 +111,15 @@ class StsEndurance < StsBase
 
 			# 漏らした時刻を更新する
 			sts["leaktime"] = Time.now
-		end
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+			# 状態変更時は強制発言
+			sts["wetsts"].speak(words)
+		else
+			# 確率で自発的発言
+			if rand(20) == 0 then
+				sts["wetsts"].speak(words)
+			end
+		end
 	end
 end
 
@@ -152,10 +162,15 @@ class StsWet < StsBase
 
 			# 漏らした時刻を更新する
 			sts["leaktime"] = Time.now
-		end
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+			# 状態変更時は強制発言
+			sts["wetsts"].speak(words)
+		else
+			# 確率で自発的発言
+			if rand(20) == 0 then
+				sts["wetsts"].speak(words)
+			end
+		end
 	end
 end
 
