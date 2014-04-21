@@ -2,6 +2,7 @@
 # おむつ交換Bot
 require 'yaml'
 require 'twitter'
+require 'pp'
 
 # twitterクライアントを生成する
 def createclient()
@@ -17,15 +18,20 @@ def createclient()
 	return client
 end
 
+# ランダムなつぶやきを行うかの乱数判定
+def talkrand()
+	return(rand(20) == 0)
+end
+
 class StsBase
 	# 尿意の最大増加値
 	MAXINCREASEVAL = 10
 
 	# がまんの閾値
-	ENDURANCEBORDER = 60
+	ENDURANCEBORDER = 280
 
 	# お漏らしの閾値
-	LEAKBORDER = 75
+	LEAKBORDER = 330
 
 	# 初期化
 	def initialize()
@@ -39,12 +45,68 @@ class StsBase
 
 	# 喋る
 	def speak(words)
-		word = words[@modename].sample
+		word = words["autonomous"][@modename].sample
 		puts (word.encode("CP932"))
 
 		# tweetする
 		client = createclient
 		client.update(word)
+	end
+
+	# 自分あての新しいメンションを取得する
+	def getnewmentions(sts)
+		client = createclient
+		mentions = client.mentions()
+		pp mentions
+		newlist = mentions.select do |tweet|
+			tweet.created_at > sts["lastmentiontime"]
+		end
+
+		pp newlist
+
+		return newlist
+	end
+
+	# メンション取得時刻を更新する
+	def updatelastmentiontime(sts)
+		sts["lastmentiontime"] = Time.now
+	end
+
+	# 回答セットから応答を抜き出す
+	def getanswerstr(mentiontext, answerset)
+		answerobj = answerset.select do |answerpair|
+			pairs = answerpair["words"].select do |word|
+				mentiontext.include?(word)
+			end
+
+			! pairs.empty?
+		end
+
+		if answerobj == nil then
+			# デフォルトメッセージから選ぶ
+			answertext = answerset.last["answers"].sample
+		else
+			# 言葉に合わせて応答を選ぶ
+			answertext = answerobj.first["answers"].sample
+		end
+
+		# 文字列の置き換えを行う
+
+
+		return answertext
+	end
+
+	# 呼びかけに反応する
+	def answer(words, sts)
+		client = createclient
+		answerset = words["answerset"][@modename]
+		getnewmentions(sts).each do |mention|
+			answerstr = getanswerstr(mention.text, answerset)
+
+			# ツイートする
+			tweetstr = "@" + mention.user.screen_name + " " + answerstr
+			client.update(tweetstr)
+		end
 	end
 
 	# 行動セット呼び出し
@@ -77,6 +139,10 @@ class StsFine < StsBase
 		# 尿意増加
 		increase(sts)
 
+		# 呼びかけに反応する
+		answer(words, sts)
+		updatelastmentiontime(sts)
+
 		# 状態変更
 		if(sts["volume"] >= ENDURANCEBORDER) then
 			# 尿意が一定以上ならがまん状態にする
@@ -86,7 +152,7 @@ class StsFine < StsBase
 			sts["wetsts"].speak(words)
 		else
 			# 確率で自発的発言
-			if rand(20) == 0 then
+			if talkrand() then
 				sts["wetsts"].speak(words)
 			end
 		end
@@ -104,6 +170,8 @@ class StsEndurance < StsBase
 		# 尿意増加
 		increase(sts)
 
+		# 呼びかけに反応する
+
 		# 状態変更
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
@@ -116,7 +184,7 @@ class StsEndurance < StsBase
 			sts["wetsts"].speak(words)
 		else
 			# 確率で自発的発言
-			if rand(20) == 0 then
+			if talkrand() then
 				sts["wetsts"].speak(words)
 			end
 		end
@@ -133,6 +201,8 @@ class StsLeak < StsBase
 	def process(words, sts)
 		# 尿意をリセットする
 		sts["volume"] = 0
+
+		# 呼びかけに反応する
 
 		# 状態変更
 		sts["wetsts"] = StsWet.new
@@ -152,6 +222,8 @@ class StsWet < StsBase
 	def process(words, sts)
 		# おむつ交換判定
 
+		# 呼びかけに反応する
+
 		# 尿意増加
 		increase(sts)
 
@@ -167,7 +239,7 @@ class StsWet < StsBase
 			sts["wetsts"].speak(words)
 		else
 			# 確率で自発的発言
-			if rand(20) == 0 then
+			if talkrand() then
 				sts["wetsts"].speak(words)
 			end
 		end
@@ -185,6 +257,8 @@ class StsChanging < StsBase
 		# 尿意増加
 		increase(sts)
 
+		# 呼びかけに反応する
+
 		# 状態変更
 		sts["wetsts"] = StsFine.new
 
@@ -200,6 +274,9 @@ class DiaperChangeBot
 	STS_LEAK	= 2 # お漏らし
 	STS_WET		= 3 # 濡れてる
 	STS_CHANGING	= 4 # おむつ交換中
+	STS_GOTOSLEEP	= 5 # 寝入り
+	STS_SLEEPING	= 6 # 睡眠中
+	STS_WAKEUP	= 7 # 起床（必ずおねしょする）
 
 	# 尿意レベル
 	def volume
@@ -217,7 +294,8 @@ class DiaperChangeBot
 			@status = {
 				"volume" => 0,
 				"wetsts" => StsFine.new,
-				"leaktime" => Time.now
+				"leaktime" => Time.now,
+				"lastmentiontime" => Time.now
 			}
 		else
 			File.open(stsfile, "r") do |f|
@@ -229,25 +307,70 @@ class DiaperChangeBot
 		# 応答パターン設定
 		if wordsfile == nil || !File.exist?(wordsfile) then
 			@words = {
-				"fine" => [
-					"まだ大丈夫。",
-					"こんにちは。"
-				],
-				"endurance" => [
-					"うう、おしっこでそう……",
-					"にゅーん……",
-					"なんだかおちつかないー",
-					"漏っちゃうー"
-				],
-				"leak" => [
-					"（しょろろろ……）あ、出ちゃった……"
-				],
-				"wet" => [
-					"うう、おむつがびしょびしょー"
-				],
-				"changing" => [
-					"新しいおむつ～♪"
-				]
+				"autonomous" => {
+					"fine" => [
+						"まだ大丈夫。",
+						"こんにちは。"
+					],
+					"endurance" => [
+						"うう、おしっこでそう……",
+						"にゅーん……",
+						"なんだかおちつかないー",
+						"漏っちゃうー"
+					],
+					"leak" => [
+						"（しょろろろ……）あ、出ちゃった……"
+					],
+					"wet" => [
+						"うう、おむつがびしょびしょー"
+					],
+					"changing" => [
+						"新しいおむつ～♪"
+					],
+					"gotosleep" => [
+						"そろそろ寝る時間。おやすみ～"
+					],
+					"sleeping" => [
+						"すー……すー……"
+					],
+					"wakeup" => [
+						"おはよう～"
+					]
+				},
+				"answerset" => {
+					"fine" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"endurance" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"leak" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"wet" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"changing" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"gotosleep" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"sleeping" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					],
+					"wakeup" => [
+						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+						{"words" => ["default"] , "answers" => ["にゃーん。"]}
+					]
+				}
 			}
 		else
 			@words = YAML.load_file(wordsfile)
