@@ -33,6 +33,9 @@ class StsBase
 	# お漏らしの閾値
 	LEAKBORDER = 330
 
+	# おむつ交換コマンド
+	CHANGECOMMAND = "おむつ交換する"
+
 	# 初期化
 	def initialize()
 		@modename = "fine"
@@ -46,6 +49,8 @@ class StsBase
 	# 喋る
 	def speak(words)
 		word = words["autonomous"][@modename].sample
+
+		# コンソールにしゃべった内容を表示
 		puts (word.encode("CP932"))
 
 		# tweetする
@@ -57,7 +62,6 @@ class StsBase
 	def getnewmentions(sts)
 		client = createclient
 		mentions = client.mentions()
-		pp mentions
 		newlist = mentions.select do |tweet|
 			tweet.created_at > sts["lastmentiontime"]
 		end
@@ -82,7 +86,7 @@ class StsBase
 			! pairs.empty?
 		end
 
-		if answerobj == nil then
+		if answerobj.empty? then
 			# デフォルトメッセージから選ぶ
 			answertext = answerset.last["answers"].sample
 		else
@@ -97,15 +101,84 @@ class StsBase
 	end
 
 	# 呼びかけに反応する
-	def answer(words, sts)
+	def answertomentions(words, sts, mentions)
 		client = createclient
 		answerset = words["answerset"][@modename]
-		getnewmentions(sts).each do |mention|
+
+		mentions.each do |mention|
 			answerstr = getanswerstr(mention.text, answerset)
 
 			# ツイートする
 			tweetstr = "@" + mention.user.screen_name + " " + answerstr
 			client.update(tweetstr)
+
+			# コンソールにしゃべった内容を表示
+			puts (tweetstr.encode("CP932"))
+		end
+	end
+
+	# 呼びかけに反応する
+	def answer(words, sts)
+		mentions = getnewmentions(sts)
+		answertomentions(words, sts, mentions)
+	end
+
+	# 文字列におむつ交換コマンドが含まれていたらtrueを返す
+	def includechange?(str)
+		return str.include?(CHANGECOMMAND)
+	end
+
+	# おむつ交換の御礼を言う
+	def saythanks(userid, words, islate = false)
+		client = createclient
+
+		objuser = client.user(userid)
+
+		if islate then
+			wordset = words["changeset"]["late"]
+		else
+			wordset = words["changeset"]["thanks"]
+		end
+
+		answerstr = wordset.sample
+
+		# ツイートする
+		tweetstr = "@" + objuser.screen_name + " " + answerstr
+		client.update(tweetstr)
+
+		# コンソールにしゃべった内容を表示
+		puts (tweetstr.encode("CP932"))
+	end
+
+	# おむつ交換判定を行う
+	def diaperchangecheck(sts, words, mentions)
+		delmentions = []
+
+		mentions.each do |mention|
+			# 取得したメンションにおむつ交換コマンドが含まれるかチェック
+			if includechange?(mention.text) then
+				# まだおむつが濡れていれば交換処理
+				if sts["wetsts"].diaperwet? then
+					# 御礼
+					saythanks(mention.user.id, words)
+
+					# 替えてくれた人にポイントをつける
+
+					# 状態を変更する
+					sts["wetsts"] = StsChanging.new
+
+				else
+					# 濡れていなければ御礼だけ言う
+					saythanks(mention.user.id, words, true)
+				end
+
+				delmentions << mention.id
+			end
+		end
+
+		# メンション配列から、返信済みのものを削除する
+		mentions.delete_if do |mention|
+			delmentions.include?(mention.id)
 		end
 	end
 
@@ -126,6 +199,11 @@ class StsBase
 	def name()
 		return self.class.to_s
 	end
+
+	# おむつが濡れているかを返す
+	def diaperwet?()
+		return false
+	end
 end
 
 # おむつが乾いた状態
@@ -143,6 +221,11 @@ class StsFine < StsBase
 		answer(words, sts)
 		updatelastmentiontime(sts)
 
+		# 確率で自発的発言
+		if talkrand() then
+			sts["wetsts"].speak(words)
+		end
+
 		# 状態変更
 		if(sts["volume"] >= ENDURANCEBORDER) then
 			# 尿意が一定以上ならがまん状態にする
@@ -150,11 +233,6 @@ class StsFine < StsBase
 
 			# 状態変更時は強制発言
 			sts["wetsts"].speak(words)
-		else
-			# 確率で自発的発言
-			if talkrand() then
-				sts["wetsts"].speak(words)
-			end
 		end
 	end
 end
@@ -171,22 +249,18 @@ class StsEndurance < StsBase
 		increase(sts)
 
 		# 呼びかけに反応する
+		answer(words, sts)
+		updatelastmentiontime(sts)
+
+		# 確率で自発的発言
+		if talkrand() then
+			sts["wetsts"].speak(words)
+		end
 
 		# 状態変更
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
-
-			# 漏らした時刻を更新する
-			sts["leaktime"] = Time.now
-
-			# 状態変更時は強制発言
-			sts["wetsts"].speak(words)
-		else
-			# 確率で自発的発言
-			if talkrand() then
-				sts["wetsts"].speak(words)
-			end
 		end
 	end
 end
@@ -199,16 +273,21 @@ class StsLeak < StsBase
 	end
 
 	def process(words, sts)
+		# 漏らした時刻を更新する
+		sts["leaktime"] = Time.now
+
 		# 尿意をリセットする
 		sts["volume"] = 0
 
 		# 呼びかけに反応する
-
-		# 状態変更
-		sts["wetsts"] = StsWet.new
+		answer(words, sts)
+		updatelastmentiontime(sts)
 
 		# 自発的発言
 		sts["wetsts"].speak(words)
+
+		# 状態変更
+		sts["wetsts"] = StsWet.new
 	end
 end
 
@@ -220,29 +299,39 @@ class StsWet < StsBase
 	end
 
 	def process(words, sts)
+		# メンション取得
+		mentions = getnewmentions(sts)
+
 		# おむつ交換判定
+		changed = diaperchangecheck(sts, words, mentions)
 
 		# 呼びかけに反応する
+		answertomentions(words, sts, mentions)
+		updatelastmentiontime(sts)
+
+		# おむつを交換済みなら処理を終了する
+		if changed then
+			return
+		end
 
 		# 尿意増加
 		increase(sts)
+
+		# 確率で自発的発言
+		if talkrand() then
+			sts["wetsts"].speak(words)
+		end
 
 		# 状態変更
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
-
-			# 漏らした時刻を更新する
-			sts["leaktime"] = Time.now
-
-			# 状態変更時は強制発言
-			sts["wetsts"].speak(words)
-		else
-			# 確率で自発的発言
-			if talkrand() then
-				sts["wetsts"].speak(words)
-			end
 		end
+	end
+
+	# おむつが濡れているかを返す
+	def diaperwet?()
+		return true
 	end
 end
 
@@ -258,12 +347,14 @@ class StsChanging < StsBase
 		increase(sts)
 
 		# 呼びかけに反応する
-
-		# 状態変更
-		sts["wetsts"] = StsFine.new
+		answer(words, sts)
+		updatelastmentiontime(sts)
 
 		# 自発的発言
 		sts["wetsts"].speak(words)
+
+		# 状態変更
+		sts["wetsts"] = StsFine.new
 	end
 end
 
@@ -370,6 +461,14 @@ class DiaperChangeBot
 						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
 						{"words" => ["default"] , "answers" => ["にゃーん。"]}
 					]
+				},
+				"changeset" => {
+					"thanks" => [
+						"わあ、おむつ替えありがとう！"
+					],
+					"late" => [
+						"ありがとうね、でももう交換してもらっちゃった。"
+					]
 				}
 			}
 		else
@@ -400,8 +499,9 @@ class DiaperChangeBot
 end
 
 savefile = "botsave.yml"
+wordsfile = "wordfile.yml"
 
-botobj = DiaperChangeBot.new(savefile)
+botobj = DiaperChangeBot.new(savefile, wordsfile)
 
 botobj.process
 
