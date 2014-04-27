@@ -507,16 +507,6 @@ class StsWakeup < StsBase
 end
 
 class DiaperChangeBot
-	# 状態定数
-	STS_FINE	= 0 # 普通
-	STS_ENDURANCE	= 1 # 我慢
-	STS_LEAK	= 2 # お漏らし
-	STS_WET		= 3 # 濡れてる
-	STS_CHANGING	= 4 # おむつ交換中
-	STS_GOTOSLEEP	= 5 # 寝入り
-	STS_SLEEPING	= 6 # 睡眠中
-	STS_WAKEUP	= 7 # 起床（必ずおねしょする）
-
 	# 尿意レベル
 	def volume
 		return @status["volume"]
