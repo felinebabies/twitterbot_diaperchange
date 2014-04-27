@@ -4,6 +4,8 @@ require 'yaml'
 require 'twitter'
 require 'pp'
 
+scriptdir = File.expand_path(File.dirname(__FILE__))
+
 # デバッグ出力
 def debugprint(str)
 	#puts (str.encode("CP932"))
@@ -12,7 +14,7 @@ end
 
 # twitterクライアントを生成する
 def createclient()
-	tsettings = YAML.load_file("tsettings.yml")
+	tsettings = YAML.load_file(scriptdir + "/tsettings.yml")
 
 	client = Twitter::REST::Client.new do |config|
 		config.consumer_key        = tsettings["consumer_key"]
@@ -480,6 +482,16 @@ class StsWakeup < StsBase
 	end
 
 	def process(words, sts)
+		# 漏らした時刻を更新する
+		sts["leaktime"] = Time.now
+
+		# 尿意をリセットする
+		sts["volume"] = 0
+
+		# 呼びかけに反応する
+		answer(words, sts)
+		updatelastmentiontime(sts)
+
 		# 自発的発言
 		sts["wetsts"].speak(words)
 
@@ -637,8 +649,8 @@ class DiaperChangeBot
 end
 
 # 設定ファイル名指定
-savefile = "botsave.yml"
-wordsfile = "wordfile.yml"
+savefile = scriptdir + "/botsave.yml"
+wordsfile = scriptdir + "/wordfile.yml"
 
 # botのインスタンス生成
 botobj = DiaperChangeBot.new(savefile, wordsfile)
