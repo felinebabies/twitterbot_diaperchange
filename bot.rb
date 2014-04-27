@@ -4,7 +4,7 @@ require 'yaml'
 require 'twitter'
 require 'pp'
 
-scriptdir = File.expand_path(File.dirname(__FILE__))
+$scriptdir = File.expand_path(File.dirname(__FILE__))
 
 # デバッグ出力
 def debugprint(str)
@@ -14,7 +14,7 @@ end
 
 # twitterクライアントを生成する
 def createclient()
-	tsettings = YAML.load_file(scriptdir + "/tsettings.yml")
+	tsettings = YAML.load_file($scriptdir + "/tsettings.yml")
 
 	client = Twitter::REST::Client.new do |config|
 		config.consumer_key        = tsettings["consumer_key"]
@@ -72,13 +72,12 @@ class StsBase
 
 		begin
 			mentions = client.mentions()
-		rescue
-			puts "メンションを取得できませんでした。"
-			newlist = []
-		else
 			newlist = mentions.select do |tweet|
 				tweet.created_at > sts["lastmentiontime"]
 			end
+		rescue
+			debugprint("メンションを取得できませんでした。")
+			newlist = []
 		end
 
 		pp newlist
@@ -125,7 +124,7 @@ class StsBase
 
 			# ツイートする
 			tweetstr = "@" + mention.user.screen_name + " " + answerstr
-			client.update(tweetstr)
+			client.update(tweetstr, :in_reply_to_status_id => mention.id)
 
 			# コンソールにしゃべった内容を表示
 			debugprint(tweetstr)
@@ -464,6 +463,10 @@ class StsSleeping < StsBase
 			sts["wetsts"].speak(words)
 		end
 
+		# 呼びかけに反応する
+		answer(words, sts)
+		updatelastmentiontime(sts)
+
 		# 睡眠判定
 		checksleep(sts)
 	end
@@ -639,8 +642,8 @@ class DiaperChangeBot
 end
 
 # 設定ファイル名指定
-savefile = scriptdir + "/botsave.yml"
-wordsfile = scriptdir + "/wordfile.yml"
+savefile = $scriptdir + "/botsave.yml"
+wordsfile = $scriptdir + "/wordfile.yml"
 
 # botのインスタンス生成
 botobj = DiaperChangeBot.new(savefile, wordsfile)
