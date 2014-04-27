@@ -4,6 +4,12 @@ require 'yaml'
 require 'twitter'
 require 'pp'
 
+# デバッグ出力
+def debugprint(str)
+	#puts (str.encode("CP932"))
+	puts (str)
+end
+
 # twitterクライアントを生成する
 def createclient()
 	tsettings = YAML.load_file("tsettings.yml")
@@ -51,7 +57,7 @@ class StsBase
 		word = words["autonomous"][@modename].sample
 
 		# コンソールにしゃべった内容を表示
-		puts (word.encode("CP932"))
+		debugprint(word)
 
 		# tweetする
 		client = createclient
@@ -120,7 +126,7 @@ class StsBase
 			client.update(tweetstr)
 
 			# コンソールにしゃべった内容を表示
-			puts (tweetstr.encode("CP932"))
+			debugprint(tweetstr)
 		end
 	end
 
@@ -154,7 +160,7 @@ class StsBase
 		client.update(tweetstr)
 
 		# コンソールにしゃべった内容を表示
-		puts (tweetstr.encode("CP932"))
+		debugprint(tweetstr)
 	end
 
 	# おむつ交換判定を行う
@@ -189,6 +195,49 @@ class StsBase
 		end
 	end
 
+	# 就寝起床時刻設定
+	def checksleep(sts)
+		# その日の起床・睡眠時刻を設定
+		if sts["wakeuptime"].to_date < Date.today || sts["gotobedtime"].to_date < Date.today then
+			day = Time.now
+			
+			# 起床はランダムな8時台
+			sts["wakeuptime"] = Time.local(day.year, day.month, day.day, 8, rand(60),0)
+			
+			# 就寝はランダムな21時台
+			sts["gotobedtime"] = Time.local(day.year, day.month, day.day, 21, rand(60),0)
+		end
+
+		# 時刻に従った状態変更
+		if (Time.now > sts["gotobedtime"]) && (! sts["wetsts"].sleeping?) then
+			# 寝る
+			sts["wetsts"] = StsGotoSleep.new
+			return
+		end
+
+		if (Time.now < sts["wakeuptime"]) && (! sts["wetsts"].sleeping?) then
+			# 寝る
+			sts["wetsts"] = StsGotoSleep.new
+			return
+		end
+
+		if (Time.now > sts["gotobedtime"]) && sts["wetsts"].sleeping? then
+			# 継続して寝る
+			return
+		end
+
+		if (Time.now < sts["wakeuptime"]) && sts["wetsts"].sleeping? then
+			# 継続して寝る
+			return
+		end
+
+		if (Time.now > sts["wakeuptime"]) && sts["wetsts"].sleeping? then
+			# 起きる
+			sts["wetsts"] = StsWakeup.new
+			return
+		end
+	end
+
 	# 行動セット呼び出し
 	def process(words, sts)
 		# 尿意増加
@@ -209,6 +258,11 @@ class StsBase
 
 	# おむつが濡れているかを返す
 	def diaperwet?()
+		return false
+	end
+
+	# 寝ているかを返す
+	def sleeping?()
 		return false
 	end
 end
@@ -240,6 +294,9 @@ class StsFine < StsBase
 
 			# 状態変更時は強制発言
 			sts["wetsts"].speak(words)
+		else
+			# 変更が無ければ睡眠判定
+			checksleep(sts)
 		end
 	end
 end
@@ -268,6 +325,9 @@ class StsEndurance < StsBase
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
+		else
+			# 変更が無ければ睡眠判定
+			checksleep(sts)
 		end
 	end
 end
@@ -333,6 +393,9 @@ class StsWet < StsBase
 		if(sts["volume"] >= LEAKBORDER) then
 			# 尿意が一定以上ならお漏らし状態にする
 			sts["wetsts"] = StsLeak.new
+		else
+			# 変更が無ければ睡眠判定
+			checksleep(sts)
 		end
 	end
 
@@ -365,6 +428,72 @@ class StsChanging < StsBase
 	end
 end
 
+# 寝入り状態
+class StsGotoSleep < StsBase
+	# 初期化
+	def initialize()
+		@modename = "gotosleep"
+	end
+
+	def process(words, sts)
+		# 自発的発言
+		sts["wetsts"].speak(words)
+
+		# 状態変更
+		sts["wetsts"] = StsSleeping.new
+	end
+
+	# 寝ているかを返す
+	def sleeping?()
+		return true
+	end
+end
+
+# 睡眠中状態
+class StsSleeping < StsBase
+	# 初期化
+	def initialize()
+		@modename = "sleeping"
+	end
+
+	def process(words, sts)
+		# 確率で自発的発言
+		if talkrand() then
+			sts["wetsts"].speak(words)
+		end
+
+		# 睡眠判定
+		checksleep(sts)
+	end
+
+	# 寝ているかを返す
+	def sleeping?()
+		return true
+	end
+end
+
+# 目覚め状態
+class StsWakeup < StsBase
+	# 初期化
+	def initialize()
+		@modename = "wakeup"
+	end
+
+	def process(words, sts)
+		# 自発的発言
+		sts["wetsts"].speak(words)
+
+		# 状態変更
+		# 必ずおねしょする
+		sts["wetsts"] = StsWet.new
+	end
+
+	# 寝ているかを返す
+	def sleeping?()
+		return true
+	end
+end
+
 class DiaperChangeBot
 	# 状態定数
 	STS_FINE	= 0 # 普通
@@ -393,7 +522,9 @@ class DiaperChangeBot
 				"volume" => 0,
 				"wetsts" => StsFine.new,
 				"leaktime" => Time.now,
-				"lastmentiontime" => Time.now
+				"lastmentiontime" => Time.now,
+				"wakeuptime" => Time.now - (60 * 60 * 24),
+				"gotobedtime" => Time.now - (60 * 60 * 24)
 			}
 		else
 			File.open(stsfile, "r") do |f|
@@ -516,8 +647,8 @@ botobj = DiaperChangeBot.new(savefile, wordsfile)
 botobj.process
 
 # 現状をコンソールに出力
-puts ("現在の尿意：" + botobj.volume.to_s).encode("CP932")
-puts ("現在の状態：" + botobj.wetsts).encode("CP932")
+debugprint("現在の尿意：" + botobj.volume.to_s)
+debugprint("現在の状態：" + botobj.wetsts)
 
 # 状態をセーブ
 botobj.save(savefile)
