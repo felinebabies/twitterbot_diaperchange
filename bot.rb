@@ -61,9 +61,16 @@ class StsBase
 	# 自分あての新しいメンションを取得する
 	def getnewmentions(sts)
 		client = createclient
-		mentions = client.mentions()
-		newlist = mentions.select do |tweet|
-			tweet.created_at > sts["lastmentiontime"]
+
+		begin
+			mentions = client.mentions()
+		rescue
+			puts "メンションを取得できませんでした。"
+			newlist = []
+		else
+			newlist = mentions.select do |tweet|
+				tweet.created_at > sts["lastmentiontime"]
+			end
 		end
 
 		pp newlist
@@ -498,14 +505,19 @@ class DiaperChangeBot
 	end
 end
 
+# 設定ファイル名指定
 savefile = "botsave.yml"
 wordsfile = "wordfile.yml"
 
+# botのインスタンス生成
 botobj = DiaperChangeBot.new(savefile, wordsfile)
 
+# bot処理実行
 botobj.process
 
+# 現状をコンソールに出力
 puts ("現在の尿意：" + botobj.volume.to_s).encode("CP932")
 puts ("現在の状態：" + botobj.wetsts).encode("CP932")
 
+# 状態をセーブ
 botobj.save(savefile)
