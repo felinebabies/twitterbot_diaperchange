@@ -371,14 +371,14 @@ class StsWet < StsBase
 		mentions = getnewmentions(sts)
 
 		# おむつ交換判定
-		changed = diaperchangecheck(sts, words, mentions)
+		diaperchangecheck(sts, words, mentions)
 
 		# 呼びかけに反応する
 		answertomentions(words, sts, mentions)
 		updatelastmentiontime(sts)
 
 		# おむつを交換済みなら処理を終了する
-		if changed then
+		if ! diaperwet? then
 			return
 		end
 
