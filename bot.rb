@@ -192,7 +192,7 @@ class StsBase
 
 		# メンション配列から、返信済みのものを削除する
 		mentions.delete_if do |mention|
-			delmentions.include?(mention.id)
+			return delmentions.include?(mention.id)
 		end
 	end
 
