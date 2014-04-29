@@ -76,7 +76,7 @@ class StsBase
 				tweet.created_at > sts["lastmentiontime"]
 			end
 		rescue
-			debugprint("メンションを取得できませんでした。")
+			warn("メンションを取得できませんでした。")
 			newlist = []
 		end
 
