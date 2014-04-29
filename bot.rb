@@ -80,6 +80,11 @@ class StsBase
 			newlist = []
 		end
 
+		# 時刻順にソートする
+		newlist.sort! do |a, b|
+			return a.created_at <=> b.created_at
+		end
+
 		pp newlist
 
 		return newlist
