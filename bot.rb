@@ -4,7 +4,11 @@ require 'yaml'
 require 'twitter'
 require 'pp'
 
+# スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
+
+# 一日中寝ないモード
+DEBUG_NO_SLEEP = false
 
 # デバッグ出力
 def debugprint(str)
@@ -201,8 +205,12 @@ class StsBase
 		end
 	end
 
-	# 就寝起床時刻設定
+	# 就寝起床処理
 	def checksleep(sts)
+		if DEBUG_NO_SLEEP then
+			return
+		end
+
 		# その日の起床・睡眠時刻を設定
 		if sts["wakeuptime"].to_date < Date.today || sts["gotobedtime"].to_date < Date.today then
 			day = Time.now
