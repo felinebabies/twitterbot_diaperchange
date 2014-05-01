@@ -35,9 +35,67 @@ def talkrand()
 	return(rand(20) == 0)
 end
 
+# 置換処理基底クラス
+class ReplaceBase
+	def process(str)
+		return str
+	end
+end
+
+# ランキング置換
+class ReplaceChangeRanking < ReplaceBase
+	KEYWORD = "<showranking>"
+	def process(str)
+		if str.include?(KEYWORD) then
+			# おむつ交換ランキングを取得する
+			manager = UserManager.new
+			userdatas = manager.userdata
+
+			if userdatas.empty? then
+				newstr = str.gsub(KEYWORD, "まだおむつ交換してくれた人はいないの。")
+				return newstr
+			end
+
+			userdatas.sort! do |a, b|
+				b["diaperchangepoint"] <=> a["diaperchangepoint"]
+			end
+
+			# トップランカーの表示名を取得
+			client = createclient()
+			topuser = client.user(userdatas.first["id"])
+			topname = topuser.screen_name
+
+			rankstr = "今までいちばん多くおむつを交換してくれたのは、" + userdatas.first["diaperchangepoint"].to_s +
+				"回交換してくれた" + topname + "だよ。"
+
+			newstr = str.gsub(KEYWORD, rankstr)
+
+			return newstr
+		else
+			return str
+		end
+	end
+end
+
+# 特殊なメッセージを置換する
+def replacespecialmessage(tweetstr)
+	commandarr = [
+		ReplaceChangeRanking.new
+	]
+
+	commandarr.each do |command|
+		tweetstr = command.process(tweetstr)
+	end
+
+	return tweetstr
+end
+
 # ユーザ管理クラス
 class UserManager
 	USERDATAFILE = $scriptdir + "/userdata.yml"
+
+	attr_reader :userdata
+
 	def initialize
 		# ユーザ情報ファイルの読み込み
 		if File.exist?(USERDATAFILE) then
@@ -165,6 +223,9 @@ class StsBase
 	def speak(words)
 		word = words["autonomous"][@modename].sample
 
+		# 文字列の置き換えを行う
+		word = replacespecialmessage(word)
+
 		# コンソールにしゃべった内容を表示
 		debugprint(word)
 
@@ -221,7 +282,7 @@ class StsBase
 		end
 
 		# 文字列の置き換えを行う
-
+		answertext = replacespecialmessage(answertext)
 
 		return answertext
 	end
