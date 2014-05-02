@@ -245,6 +245,7 @@ class StsBase
 			end
 		rescue
 			warn("メンションを取得できませんでした。")
+			mentions = []
 			newlist = []
 		end
 
@@ -252,15 +253,26 @@ class StsBase
 		newlist.sort! do |a, b|
 			a.created_at <=> b.created_at
 		end
+		mentions.sort! do |a, b|
+			a.created_at <=> b.created_at
+		end
 
 		pp newlist
+
+		if ! mentions.empty? then
+			sts["newestmention"] = mentions.last.created_at
+		end
 
 		return newlist
 	end
 
 	# メンション取得時刻を更新する
 	def updatelastmentiontime(sts)
-		sts["lastmentiontime"] = Time.now
+		if sts.has_key?("newestmention") then
+			sts["lastmentiontime"] = sts["newestmention"]
+		else
+			sts["lastmentiontime"] = Time.now
+		end
 	end
 
 	# 回答セットから応答を抜き出す
