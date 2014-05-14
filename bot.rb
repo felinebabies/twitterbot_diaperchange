@@ -170,6 +170,9 @@ class UserManager
 			end
 		end
 
+		# ユーザ表示名を更新する
+		updatedispname(userobj)
+
 		@userdata[objindex] = userobj.dup
 	end
 
