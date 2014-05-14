@@ -65,7 +65,8 @@ class ReplaceChangeRanking < ReplaceBase
 			topuser = client.user(userdatas.first["id"])
 			topname = topuser.screen_name
 
-			rankstr = "今までいちばん多くおむつを交換してくれたのは、" + userdatas.first["diaperchangepoint"].to_s +
+			rankstr = "今までいちばん多くおむつを交換してくれたのは、" +
+				userdatas.first["diaperchangepoint"].to_s +
 				"回交換してくれた" + topname + "だよ。"
 
 			newstr = str.gsub(KEYWORD, rankstr)
@@ -125,7 +126,8 @@ class UserManager
 			"id" => userid,
 			"diaperchangepoint" => 0,
 			"calledname" => "",
-			"interestpoint" => 0
+			"interestpoint" => 0,
+			"displayname" => ""
 		}
 
 		@userdata << userobj
@@ -833,21 +835,24 @@ class DiaperChangeBot
 	end
 end
 
-# 設定ファイル名指定
-savefile = $scriptdir + "/botsave.yml"
-wordsfile = $scriptdir + "/wordfile.yml"
+# 自身を実行した場合にのみ起動
+if __FILE__ == $PROGRAM_NAME then
+	# 設定ファイル名指定
+	savefile = $scriptdir + "/botsave.yml"
+	wordsfile = $scriptdir + "/wordfile.yml"
 
 
-# botのインスタンス生成
-botobj = DiaperChangeBot.new(savefile, wordsfile)
+	# botのインスタンス生成
+	botobj = DiaperChangeBot.new(savefile, wordsfile)
 
-# bot処理実行
-botobj.process
+	# bot処理実行
+	botobj.process
 
-# 現状をコンソールに出力
-debugprint("現在の尿意：" + botobj.volume.to_s)
-debugprint("現在の状態：" + botobj.wetsts)
+	# 現状をコンソールに出力
+	debugprint("現在の尿意：" + botobj.volume.to_s)
+	debugprint("現在の状態：" + botobj.wetsts)
 
-# 状態をセーブ
-botobj.save(savefile)
+	# 状態をセーブ
+	botobj.save(savefile)
 
+end
