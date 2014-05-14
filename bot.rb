@@ -99,6 +99,11 @@ class UserManager
 
 	def initialize
 		# ユーザ情報ファイルの読み込み
+		load
+	end
+
+	# ユーザ情報ファイルの読み込み
+	def load
 		if File.exist?(USERDATAFILE) then
 			File.open(USERDATAFILE, "r") do |f|
 				f.flock(File::LOCK_SH)
@@ -188,13 +193,34 @@ class UserManager
 				"id" => userid,
 				"diaperchangepoint" => 0,
 				"calledname" => "",
-				"interestpoint" => 0
+				"interestpoint" => 0,
+				"displayname" => ""
 			}
 		end
 
 		userobj["diaperchangepoint"] += val
 
 		update(userobj)
+	end
+
+	# ユーザー表示名を更新する
+	def updatedispname(userdata)
+		client = createclient()
+
+		begin
+			userobj = client.user(userdata["id"])
+
+			userdata["displayname"] = userobj.name
+		rescue
+			warn(userdata["id"].to_s + "のユーザ情報を取得できませんでした。")
+		end
+	end
+
+	# ユーザー表示名を全て更新する
+	def updatedispnameall()
+		@userdata.each do |userdata|
+			updatedispname(userdata)
+		end
 	end
 end
 
