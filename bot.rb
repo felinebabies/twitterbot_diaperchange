@@ -4,7 +4,7 @@ require 'yaml'
 require 'twitter'
 require 'pp'
 
-# スクリプトファイルの所在
+# 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
 
 # 一日中寝ないモード
@@ -238,7 +238,20 @@ class StsBase
 	LEAKBORDER = 330
 
 	# おむつ交換コマンド
-	CHANGECOMMAND = "おむつ交換する"
+	CHANGECOMMAND = [
+		"おむつ交換する",
+		"おむつ交換します",
+		"おむつ交換してあげる",
+		"おむつを交換する",
+		"おむつを交換します",
+		"おむつを交換してあげる",
+		"オムツ交換する",
+		"オムツ交換します",
+		"オムツ交換してあげる",
+		"オムツを交換する",
+		"オムツを交換します",
+		"オムツを交換してあげる"
+	]
 
 	# 初期化
 	def initialize()
@@ -355,7 +368,10 @@ class StsBase
 
 	# 文字列におむつ交換コマンドが含まれていたらtrueを返す
 	def includechange?(str)
-		return str.include?(CHANGECOMMAND)
+		changeset = CHANGECOMMAND.select do |pattern|
+			str.include?(pattern)
+		end
+		return ! changeset.empty?
 	end
 
 	# おむつ交換の御礼を言う
