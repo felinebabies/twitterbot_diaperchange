@@ -13,7 +13,7 @@ DEBUG_NO_SLEEP = false
 # デバッグ出力
 def debugprint(str)
 	#puts (str.encode("CP932"))
-	puts (str)
+	puts(str)
 end
 
 # twitterクライアントを生成する
@@ -251,7 +251,9 @@ class StsBase
 		"オムツを交換する",
 		"オムツを交換します",
 		"オムツを交換してあげる",
-		"おむつ交換しようね"
+		"おむつ交換しようね",
+		"おむつ交換しよっか",
+    "オムツ交換しよっか"
 	]
 
 	# 初期化
@@ -441,10 +443,10 @@ class StsBase
 		# その日の起床・睡眠時刻を設定
 		if sts["wakeuptime"].to_date < Date.today || sts["gotobedtime"].to_date < Date.today then
 			day = Time.now
-			
+
 			# 起床はランダムな8時台
 			sts["wakeuptime"] = Time.local(day.year, day.month, day.day, 8, rand(60),0)
-			
+
 			# 就寝はランダムな21時台
 			sts["gotobedtime"] = Time.local(day.year, day.month, day.day, 21, rand(60),0)
 		end
