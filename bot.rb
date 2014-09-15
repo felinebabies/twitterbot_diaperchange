@@ -3,6 +3,7 @@
 require 'yaml'
 require 'twitter'
 require 'pp'
+require 'optparse'
 
 # 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
@@ -17,6 +18,18 @@ $always_tweet_flag = false
 def debugprint(str)
 	#puts (str.encode("CP932"))
 	puts(str)
+end
+
+# コマンドラインオプション解析
+def cmdline
+  args = {}
+
+  OptionParser.new do |parser|
+    parser.on('-f', '--f', '必ずつぶやく') {|v| args[:force] = v}
+    parser.parse!(ARGV)
+  end
+
+  return args
 end
 
 # twitterクライアントを生成する
@@ -896,6 +909,13 @@ if __FILE__ == $PROGRAM_NAME then
 	savefile = $scriptdir + "/botsave.yml"
 	wordsfile = $scriptdir + "/wordfile.yml"
 
+	# コマンドライン解析
+	args = cmdline
+
+	# 必ずつぶやくモード
+	if(args[:force]) then
+    $always_tweet_flag = true
+	end
 
 	# botのインスタンス生成
 	botobj = DiaperChangeBot.new(savefile, wordsfile)
