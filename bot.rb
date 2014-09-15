@@ -10,6 +10,9 @@ $scriptdir = File.expand_path(File.dirname(__FILE__))
 # 一日中寝ないモード
 DEBUG_NO_SLEEP = false
 
+# ランダムなつぶやきを必ず実行するフラグ
+$always_tweet_flag = false
+
 # デバッグ出力
 def debugprint(str)
 	#puts (str.encode("CP932"))
@@ -32,7 +35,11 @@ end
 
 # ランダムなつぶやきを行うかの乱数判定
 def talkrand()
-	return(rand(20) == 0)
+  if($always_tweet_flag == true) then
+    return(true)
+  else
+    return(rand(20) == 0)
+  end
 end
 
 # 置換処理基底クラス
