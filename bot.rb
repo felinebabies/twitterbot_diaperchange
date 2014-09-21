@@ -1,4 +1,4 @@
-﻿# coding: utf-8
+# coding: utf-8
 # おむつ交換Bot
 require 'yaml'
 require 'twitter'
@@ -57,7 +57,7 @@ end
 
 # 置換処理基底クラス
 class ReplaceBase
-	def process(str)
+	def process(str, mention, maxlen)
 		return str
 	end
 end
@@ -65,7 +65,7 @@ end
 # ランキング置換
 class ReplaceChangeRanking < ReplaceBase
 	KEYWORD = "<showranking>"
-	def process(str)
+	def process(str, mention, maxlen)
 		if str.include?(KEYWORD) then
 			# おむつ交換ランキングを取得する
 			manager = UserManager.new
@@ -76,20 +76,75 @@ class ReplaceChangeRanking < ReplaceBase
 				return newstr
 			end
 
+			# ランク順にソート
 			userdatas.sort! do |a, b|
 				b["diaperchangepoint"] <=> a["diaperchangepoint"]
 			end
 
-			# トップランカーの表示名を取得
-			client = createclient()
-			topuser = client.user(userdatas.first["id"])
-			topname = topuser.screen_name
+			# クライアントを取得
+      client = createclient()
 
-			rankstr = "今までいちばん多くおむつを交換してくれたのは、" +
-				userdatas.first["diaperchangepoint"].to_s +
-				"回交換してくれた" + topname + "だよ。"
+      # メンション先ユーザIDの初期化
+      mentionuserid = nil
 
-			newstr = str.gsub(KEYWORD, rankstr)
+      # 文字列の先頭部分を作成
+      if mention then
+        mentionuser = userdatas.select do |user|
+          user["id"] == mention.user.id
+        end
+
+        if mentionuser.empty? then
+          headstr = "今までおむつを替えてくれた数は、"
+        else
+          mentionuserid = mentionuser.first["id"]
+          headstr = "さんは、#{mentionuser.first["diaperchangepoint"].to_s}回おむつを替えてくれたよ。"
+        end
+      else
+        headstr = "今までおむつを替えてくれた数は、"
+      end
+
+      nextrankstr = String.new(headstr)
+
+      rankcount = 0
+      tweetlength = str.gsub(KEYWORD, headstr).size
+      while tweetlength <= maxlen do
+        if(! userdatas[rankcount]) then
+          break
+        end
+
+        if(mentionuserid && (mentionuserid == userdatas[rankcount]["id"])) then
+          # ランクのカウントを進める
+          rankcount += 1
+          next
+        end
+
+        # トップランカーの表示名を取得
+        begin
+          rankeruser = client.user(userdatas[rankcount]["id"])
+        rescue
+          # 存在しないユーザの場合はスキップ
+          # ランクのカウントを進める
+          rankcount += 1
+          next
+        end
+        rankername = rankeruser.screen_name
+
+        catrankstr = nextrankstr
+
+        # ランク文字列を作成
+        rankstr = "#{rankername}さんは、#{userdatas[rankcount]["diaperchangepoint"].to_s}回。"
+
+        nextrankstr = catrankstr + rankstr
+
+        # tweetlengthを更新
+        tweetlength = str.gsub(KEYWORD, nextrankstr).size
+
+        # ランクのカウントを進める
+        rankcount += 1
+      end
+
+      # 文字列の置き換えを行う
+			newstr = str.gsub(KEYWORD, catrankstr)
 
 			return newstr
 		else
@@ -99,13 +154,13 @@ class ReplaceChangeRanking < ReplaceBase
 end
 
 # 特殊なメッセージを置換する
-def replacespecialmessage(tweetstr)
+def replacespecialmessage(tweetstr, mention, maxlen)
 	commandarr = [
 		ReplaceChangeRanking.new
 	]
 
 	commandarr.each do |command|
-		tweetstr = command.process(tweetstr)
+		tweetstr = command.process(tweetstr, mention, maxlen)
 	end
 
 	return tweetstr
@@ -291,7 +346,7 @@ class StsBase
 		word = words["autonomous"][@modename].sample
 
 		# 文字列の置き換えを行う
-		word = replacespecialmessage(word)
+		word = replacespecialmessage(word, nil, 140)
 
 		# コンソールにしゃべった内容を表示
 		debugprint(word)
@@ -343,10 +398,10 @@ class StsBase
 	end
 
 	# 回答セットから応答を抜き出す
-	def getanswerstr(mentiontext, answerset)
+	def getanswerstr(mention, answerset, maxlen)
 		answerobj = answerset.select do |answerpair|
 			pairs = answerpair["words"].select do |word|
-				mentiontext.include?(word)
+				mention.text.include?(word)
 			end
 
 			! pairs.empty?
@@ -361,7 +416,7 @@ class StsBase
 		end
 
 		# 文字列の置き換えを行う
-		answertext = replacespecialmessage(answertext)
+		answertext = replacespecialmessage(answertext, mention, maxlen)
 
 		return answertext
 	end
@@ -372,14 +427,21 @@ class StsBase
 		answerset = words["answerset"][@modename]
 
 		mentions.each do |mention|
-			answerstr = getanswerstr(mention.text, answerset)
+		  useridstr = "@" + mention.user.screen_name + " "
+		  maxlen = 140 - useridstr.size
+			answerstr = getanswerstr(mention, answerset, maxlen)
 
-			# ツイートする
-			tweetstr = "@" + mention.user.screen_name + " " + answerstr
+			tweetstr = useridstr + answerstr
+
+      debugprint("maxlen=#{maxlen}")
+      debugprint("answerstrlen=#{answerstr.size}")
+
+      # コンソールにしゃべった内容を表示
+      debugprint(tweetstr)
+
+      # ツイートする
 			client.update(tweetstr, :in_reply_to_status_id => mention.id)
 
-			# コンソールにしゃべった内容を表示
-			debugprint(tweetstr)
 		end
 	end
 
