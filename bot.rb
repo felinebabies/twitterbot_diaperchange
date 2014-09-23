@@ -314,6 +314,17 @@ class UserManager
 	end
 end
 
+# おむつ交換コマンド管理クラス
+class ChangeCommands
+  include Singleton
+
+  attr_reader :commands
+
+  def initialize
+    @commands = YAML.load_file($scriptdir + "/changecommands.yml")
+  end
+end
+
 class StsBase
 	# 尿意の最大増加値
 	MAXINCREASEVAL = 10
@@ -323,25 +334,6 @@ class StsBase
 
 	# お漏らしの閾値
 	LEAKBORDER = 330
-
-	# おむつ交換コマンド
-	CHANGECOMMAND = [
-		"おむつ交換する",
-		"おむつ交換します",
-		"おむつ交換してあげる",
-		"おむつを交換する",
-		"おむつを交換します",
-		"おむつを交換してあげる",
-		"オムツ交換する",
-		"オムツ交換します",
-		"オムツ交換してあげる",
-		"オムツを交換する",
-		"オムツを交換します",
-		"オムツを交換してあげる",
-		"おむつ交換しようね",
-		"おむつ交換しよっか",
-    "オムツ交換しよっか"
-	]
 
 	# 初期化
 	def initialize()
@@ -465,7 +457,7 @@ class StsBase
 
 	# 文字列におむつ交換コマンドが含まれていたらtrueを返す
 	def includechange?(str)
-		changeset = CHANGECOMMAND.select do |pattern|
+		changeset = ChangeCommands.instance.commands.select do |pattern|
 			str.include?(pattern)
 		end
 		return ! changeset.empty?
