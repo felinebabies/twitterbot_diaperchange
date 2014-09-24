@@ -17,8 +17,8 @@ $always_tweet_flag = false
 
 # デバッグ出力
 def debugprint(str)
-	#puts (str.encode("CP932"))
-	puts(str)
+  #puts (str.encode("CP932"))
+  puts(str)
 end
 
 # コマンドラインオプション解析
@@ -38,7 +38,6 @@ class BotTwitterClient
   include Singleton
 
   attr_accessor :client
-
   def initialize
     tsettings = YAML.load_file($scriptdir + "/tsettings.yml")
 
@@ -53,9 +52,9 @@ end
 
 # twitterクライアントを生成する
 def createclient()
-	twitterclient = BotTwitterClient.instance
+  twitterclient = BotTwitterClient.instance
 
-	return twitterclient.client
+  return twitterclient.client
 end
 
 # ランダムなつぶやきを行うかの乱数判定
@@ -69,31 +68,31 @@ end
 
 # 置換処理基底クラス
 class ReplaceBase
-	def process(str, mention, maxlen)
-		return str
-	end
+  def process(str, mention, maxlen)
+    return str
+  end
 end
 
 # ランキング置換
 class ReplaceChangeRanking < ReplaceBase
-	KEYWORD = "<showranking>"
-	def process(str, mention, maxlen)
-		if str.include?(KEYWORD) then
-			# おむつ交換ランキングを取得する
-			manager = UserManager.new
-			userdatas = manager.userdata
+  KEYWORD = "<showranking>"
+  def process(str, mention, maxlen)
+    if str.include?(KEYWORD) then
+      # おむつ交換ランキングを取得する
+      manager = UserManager.new
+      userdatas = manager.userdata
 
-			if userdatas.empty? then
-				newstr = str.gsub(KEYWORD, "まだおむつ交換してくれた人はいないの。")
-				return newstr
-			end
+      if userdatas.empty? then
+        newstr = str.gsub(KEYWORD, "まだおむつ交換してくれた人はいないの。")
+        return newstr
+      end
 
-			# ランク順にソート
-			userdatas.sort! do |a, b|
-				b["diaperchangepoint"] <=> a["diaperchangepoint"]
-			end
+      # ランク順にソート
+      userdatas.sort! do |a, b|
+        b["diaperchangepoint"] <=> a["diaperchangepoint"]
+      end
 
-			# クライアントを取得
+      # クライアントを取得
       client = createclient()
 
       # メンション先ユーザIDの初期化
@@ -156,162 +155,161 @@ class ReplaceChangeRanking < ReplaceBase
       end
 
       # 文字列の置き換えを行う
-			newstr = str.gsub(KEYWORD, catrankstr)
+      newstr = str.gsub(KEYWORD, catrankstr)
 
-			return newstr
-		else
-			return str
-		end
-	end
+      return newstr
+    else
+      return str
+    end
+  end
 end
 
 # 特殊なメッセージを置換する
 def replacespecialmessage(tweetstr, mention, maxlen)
-	commandarr = [
-		ReplaceChangeRanking.new
-	]
+  commandarr = [
+    ReplaceChangeRanking.new
+  ]
 
-	commandarr.each do |command|
-		tweetstr = command.process(tweetstr, mention, maxlen)
-	end
+  commandarr.each do |command|
+    tweetstr = command.process(tweetstr, mention, maxlen)
+  end
 
-	return tweetstr
+  return tweetstr
 end
 
 # ユーザ管理クラス
 class UserManager
-	USERDATAFILE = $scriptdir + "/userdata.yml"
+  USERDATAFILE = $scriptdir + "/userdata.yml"
 
-	attr_reader :userdata
+  attr_reader :userdata
+  def initialize
+    # ユーザ情報ファイルの読み込み
+    load
+  end
 
-	def initialize
-		# ユーザ情報ファイルの読み込み
-		load
-	end
+  # ユーザ情報ファイルの読み込み
+  def load
+    if File.exist?(USERDATAFILE) then
+      File.open(USERDATAFILE, "r") do |f|
+        f.flock(File::LOCK_SH)
+        @userdata = YAML.load(f.read)
+      end
+    else
+      @userdata = []
+    end
+  end
 
-	# ユーザ情報ファイルの読み込み
-	def load
-		if File.exist?(USERDATAFILE) then
-			File.open(USERDATAFILE, "r") do |f|
-				f.flock(File::LOCK_SH)
-				@userdata = YAML.load(f.read)
-			end
-		else
-			@userdata = []
-		end
-	end
+  # データをファイルに保存する
+  def save
+    File.open(USERDATAFILE, File::RDWR|File::CREAT) do |yml|
+      yml.flock(File::LOCK_EX)
+      yml.rewind
+      YAML.dump(@userdata, yml)
+      yml.flush
+      yml.truncate(yml.pos)
+    end
+  end
 
-	# データをファイルに保存する
-	def save
-		File.open(USERDATAFILE, File::RDWR|File::CREAT) do |yml|
-			yml.flock(File::LOCK_EX)
-			yml.rewind
-			YAML.dump(@userdata, yml)
-			yml.flush
-			yml.truncate(yml.pos)
-		end
-	end
+  # ユーザを追加
+  def adduser(userid)
+    userobj = {
+      "id" => userid,
+      "diaperchangepoint" => 0,
+      "calledname" => "",
+      "interestpoint" => 0,
+      "displayname" => ""
+    }
 
-	# ユーザを追加
-	def adduser(userid)
-		userobj = {
-			"id" => userid,
-			"diaperchangepoint" => 0,
-			"calledname" => "",
-			"interestpoint" => 0,
-			"displayname" => ""
-		}
+    @userdata << userobj
+  end
 
-		@userdata << userobj
-	end
+  # ユーザオブジェクトを取得、存在しなければnilを返す
+  def getuser(userid)
+    userobj = @userdata.select do |user|
+      user["id"] == userid
+    end
 
-	# ユーザオブジェクトを取得、存在しなければnilを返す
-	def getuser(userid)
-		userobj = @userdata.select do |user|
-			user["id"] == userid
-		end
+    return userobj.first
+  end
 
-		return userobj.first
-	end
+  # ユーザオブジェクトの更新
+  def update(userobj)
+    # 指定IDのインデックスを取得する
+    if userobj.has_key?("id") then
+      uid = userobj["id"]
+    else
+      warn("update:引数は正しいユーザオブジェクトではありません。")
+      return
+    end
 
-	# ユーザオブジェクトの更新
-	def update(userobj)
-		# 指定IDのインデックスを取得する
-		if userobj.has_key?("id") then
-			uid = userobj["id"]
-		else
-			warn("update:引数は正しいユーザオブジェクトではありません。")
-			return
-		end
+    objindex = @userdata.index do |user|
+      user["id"] == uid
+    end
 
-		objindex = @userdata.index do |user|
-			user["id"] == uid
-		end
+    if objindex == nil then
+      # 存在しない場合、新たにユーザを追加する
+      adduser(uid)
 
-		if objindex == nil then
-			# 存在しない場合、新たにユーザを追加する
-			adduser(uid)
+      objindex = @userdata.index do |user|
+        user["id"] == uid
+      end
+    end
 
-			objindex = @userdata.index do |user|
-				user["id"] == uid
-			end
-		end
+    # ユーザ表示名を更新する
+    updatedispname(userobj)
 
-		# ユーザ表示名を更新する
-		updatedispname(userobj)
+    @userdata[objindex] = userobj.dup
+  end
 
-		@userdata[objindex] = userobj.dup
-	end
+  # おむつ交換ポイントを取得する
+  def getchangepoint(userid)
+    user = getuser(userid)
+    if user == nil then
+      warn("getchangepoint:指定のユーザが存在しませんでした。" + userid.to_s)
+      return 0
+    end
 
-	# おむつ交換ポイントを取得する
-	def getchangepoint(userid)
-		user = getuser(userid)
-		if user == nil then
-			warn("getchangepoint:指定のユーザが存在しませんでした。" + userid.to_s)
-			return 0
-		end
+    return user["diaperchangepoint"]
+  end
 
-		return user["diaperchangepoint"]
-	end
+  # おむつ交換ポイントに加算する
+  def addchangepoint(userid, val)
+    userobj = getuser(userid)
+    if userobj == nil then
+      # 存在しなければオブジェクトを作成
+      userobj = {
+        "id" => userid,
+        "diaperchangepoint" => 0,
+        "calledname" => "",
+        "interestpoint" => 0,
+        "displayname" => ""
+      }
+    end
 
-	# おむつ交換ポイントに加算する
-	def addchangepoint(userid, val)
-		userobj = getuser(userid)
-		if userobj == nil then
-			# 存在しなければオブジェクトを作成
-			userobj = {
-				"id" => userid,
-				"diaperchangepoint" => 0,
-				"calledname" => "",
-				"interestpoint" => 0,
-				"displayname" => ""
-			}
-		end
+    userobj["diaperchangepoint"] += val
 
-		userobj["diaperchangepoint"] += val
+    update(userobj)
+  end
 
-		update(userobj)
-	end
+  # ユーザー表示名を更新する
+  def updatedispname(userdata)
+    client = createclient()
 
-	# ユーザー表示名を更新する
-	def updatedispname(userdata)
-		client = createclient()
+    begin
+      userobj = client.user(userdata["id"])
 
-		begin
-			userobj = client.user(userdata["id"])
+      userdata["displayname"] = userobj.name
+    rescue
+      warn(userdata["id"].to_s + "のユーザ情報を取得できませんでした。")
+    end
+  end
 
-			userdata["displayname"] = userobj.name
-		rescue
-			warn(userdata["id"].to_s + "のユーザ情報を取得できませんでした。")
-		end
-	end
-
-	# ユーザー表示名を全て更新する
-	def updatedispnameall()
-		@userdata.each do |userdata|
-			updatedispname(userdata)
-		end
-	end
+  # ユーザー表示名を全て更新する
+  def updatedispnameall()
+    @userdata.each do |userdata|
+      updatedispname(userdata)
+    end
+  end
 end
 
 # おむつ交換コマンド管理クラス
@@ -319,123 +317,121 @@ class ChangeCommands
   include Singleton
 
   attr_reader :commands
-
   def initialize
     @commands = YAML.load_file($scriptdir + "/changecommands.yml")
   end
 end
 
 class StsBase
-	# 尿意の最大増加値
-	MAXINCREASEVAL = 10
+  # 尿意の最大増加値
+  MAXINCREASEVAL = 10
 
-	# がまんの閾値
-	ENDURANCEBORDER = 280
+  # がまんの閾値
+  ENDURANCEBORDER = 280
 
-	# お漏らしの閾値
-	LEAKBORDER = 330
+  # お漏らしの閾値
+  LEAKBORDER = 330
+  # 初期化
+  def initialize()
+    @modename = "fine"
+  end
 
-	# 初期化
-	def initialize()
-		@modename = "fine"
-	end
+  # 尿意増加
+  def increase(status)
+    status["volume"] = status["volume"] + (rand(MAXINCREASEVAL) + 1)
+  end
 
-	# 尿意増加
-	def increase(status)
-		status["volume"] = status["volume"] + (rand(MAXINCREASEVAL) + 1)
-	end
+  # 喋る
+  def speak(words)
+    word = words["autonomous"][@modename].sample
 
-	# 喋る
-	def speak(words)
-		word = words["autonomous"][@modename].sample
+    # 文字列の置き換えを行う
+    word = replacespecialmessage(word, nil, 140)
 
-		# 文字列の置き換えを行う
-		word = replacespecialmessage(word, nil, 140)
+    # コンソールにしゃべった内容を表示
+    debugprint(word)
 
-		# コンソールにしゃべった内容を表示
-		debugprint(word)
+    # tweetする
+    client = createclient
+    client.update(word)
+  end
 
-		# tweetする
-		client = createclient
-		client.update(word)
-	end
+  # 自分あての新しいメンションを取得する
+  def getnewmentions(sts)
+    client = createclient
 
-	# 自分あての新しいメンションを取得する
-	def getnewmentions(sts)
-		client = createclient
+    begin
+      mentions = client.mentions()
+      newlist = mentions.select do |tweet|
+        tweet.created_at > sts["lastmentiontime"]
+      end
+    rescue
+      warn("メンションを取得できませんでした。")
+      mentions = []
+      newlist = []
+    end
 
-		begin
-			mentions = client.mentions()
-			newlist = mentions.select do |tweet|
-				tweet.created_at > sts["lastmentiontime"]
-			end
-		rescue
-			warn("メンションを取得できませんでした。")
-			mentions = []
-			newlist = []
-		end
+    # 時刻順にソートする
+    newlist.sort! do |a, b|
+      a.created_at <=> b.created_at
+    end
+    mentions.sort! do |a, b|
+      a.created_at <=> b.created_at
+    end
 
-		# 時刻順にソートする
-		newlist.sort! do |a, b|
-			a.created_at <=> b.created_at
-		end
-		mentions.sort! do |a, b|
-			a.created_at <=> b.created_at
-		end
+    pp newlist
 
-		pp newlist
+    if ! mentions.empty? then
+      sts["newestmention"] = mentions.last.created_at
+    end
 
-		if ! mentions.empty? then
-			sts["newestmention"] = mentions.last.created_at
-		end
+    return newlist
+  end
 
-		return newlist
-	end
+  # メンション取得時刻を更新する
+  def updatelastmentiontime(sts)
+    if sts.has_key?("newestmention") then
+      sts["lastmentiontime"] = sts["newestmention"]
+    else
+      sts["lastmentiontime"] = Time.now
+    end
+  end
 
-	# メンション取得時刻を更新する
-	def updatelastmentiontime(sts)
-		if sts.has_key?("newestmention") then
-			sts["lastmentiontime"] = sts["newestmention"]
-		else
-			sts["lastmentiontime"] = Time.now
-		end
-	end
+  # 回答セットから応答を抜き出す
+  def getanswerstr(mention, answerset, maxlen)
+    answerobj = answerset.select do |answerpair|
+      pairs = answerpair["words"].select do |word|
+        mention.text.include?(word)
+      end
 
-	# 回答セットから応答を抜き出す
-	def getanswerstr(mention, answerset, maxlen)
-		answerobj = answerset.select do |answerpair|
-			pairs = answerpair["words"].select do |word|
-				mention.text.include?(word)
-			end
+      ! pairs.empty?
+    end
 
-			! pairs.empty?
-		end
+    if answerobj.empty? then
+      # デフォルトメッセージから選ぶ
+      answertext = answerset.last["answers"].sample
+    else
+      # 言葉に合わせて応答を選ぶ
+      answertext = answerobj.first["answers"].sample
+    end
 
-		if answerobj.empty? then
-			# デフォルトメッセージから選ぶ
-			answertext = answerset.last["answers"].sample
-		else
-			# 言葉に合わせて応答を選ぶ
-			answertext = answerobj.first["answers"].sample
-		end
+    # 文字列の置き換えを行う
+    answertext = replacespecialmessage(answertext, mention, maxlen)
 
-		# 文字列の置き換えを行う
-		answertext = replacespecialmessage(answertext, mention, maxlen)
+    return answertext
+  end
 
-		return answertext
-	end
+  # 呼びかけに反応する
+  def answertomentions(words, sts, mentions)
+    client = createclient
+    answerset = words["answerset"][@modename]
 
-	# 呼びかけに反応する
-	def answertomentions(words, sts, mentions)
-		client = createclient
-		answerset = words["answerset"][@modename]
+    mentions.each do |mention|
+      useridstr = "@" + mention.user.screen_name + " "
+      maxlen = 140 - useridstr.size
+      answerstr = getanswerstr(mention, answerset, maxlen)
 
-		mentions.each do |mention|
-		  useridstr = "@" + mention.user.screen_name + " "
-		  maxlen = 140 - useridstr.size
-			answerstr = getanswerstr(mention, answerset, maxlen)
-
-			tweetstr = useridstr + answerstr
+      tweetstr = useridstr + answerstr
 
       debugprint("maxlen=#{maxlen}")
       debugprint("answerstrlen=#{answerstr.size}")
@@ -444,556 +440,556 @@ class StsBase
       debugprint(tweetstr)
 
       # ツイートする
-			client.update(tweetstr, :in_reply_to_status_id => mention.id)
+      client.update(tweetstr, :in_reply_to_status_id => mention.id)
 
-		end
-	end
+    end
+  end
 
-	# 呼びかけに反応する
-	def answer(words, sts)
-		mentions = getnewmentions(sts)
-		answertomentions(words, sts, mentions)
-	end
+  # 呼びかけに反応する
+  def answer(words, sts)
+    mentions = getnewmentions(sts)
+    answertomentions(words, sts, mentions)
+  end
 
-	# 文字列におむつ交換コマンドが含まれていたらtrueを返す
-	def includechange?(str)
-		changeset = ChangeCommands.instance.commands.select do |pattern|
-			str.include?(pattern)
-		end
-		return ! changeset.empty?
-	end
+  # 文字列におむつ交換コマンドが含まれていたらtrueを返す
+  def includechange?(str)
+    changeset = ChangeCommands.instance.commands.select do |pattern|
+      str.include?(pattern)
+    end
+    return ! changeset.empty?
+  end
 
-	# おむつ交換の御礼を言う
-	def saythanks(mention, words, islate = false)
-		client = createclient
+  # おむつ交換の御礼を言う
+  def saythanks(mention, words, islate = false)
+    client = createclient
 
-		objuser = client.user(mention.user.id)
+    objuser = client.user(mention.user.id)
 
-		if islate then
-			wordset = words["changeset"]["late"]
-		else
-			wordset = words["changeset"]["thanks"]
-		end
+    if islate then
+      wordset = words["changeset"]["late"]
+    else
+      wordset = words["changeset"]["thanks"]
+    end
 
-		answerstr = wordset.sample
+    answerstr = wordset.sample
 
-		# ツイートする
-		tweetstr = "@" + objuser.screen_name + " " + answerstr
-		client.update(tweetstr, :in_reply_to_status_id => mention.id)
+    # ツイートする
+    tweetstr = "@" + objuser.screen_name + " " + answerstr
+    client.update(tweetstr, :in_reply_to_status_id => mention.id)
 
-		# コンソールにしゃべった内容を表示
-		debugprint(tweetstr)
-	end
+    # コンソールにしゃべった内容を表示
+    debugprint(tweetstr)
+  end
 
-	# おむつ交換判定を行う
-	def diaperchangecheck(sts, words, mentions)
-		delmentions = []
+  # おむつ交換判定を行う
+  def diaperchangecheck(sts, words, mentions)
+    delmentions = []
 
-		mentions.each do |mention|
-			# 取得したメンションにおむつ交換コマンドが含まれるかチェック
-			if includechange?(mention.text) then
-				# まだおむつが濡れていれば交換処理
-				if sts["wetsts"].diaperwet? then
-					# 御礼
-					saythanks(mention, words)
+    mentions.each do |mention|
+      # 取得したメンションにおむつ交換コマンドが含まれるかチェック
+      if includechange?(mention.text) then
+        # まだおむつが濡れていれば交換処理
+        if sts["wetsts"].diaperwet? then
+          # 御礼
+          saythanks(mention, words)
 
-					# 替えてくれた人にポイントをつける
-					manager = UserManager.new
-					manager.addchangepoint(mention.user.id, 1)
-					manager.save
+          # 替えてくれた人にポイントをつける
+          manager = UserManager.new
+          manager.addchangepoint(mention.user.id, 1)
+          manager.save
 
-					# 状態を変更する
-					sts["wetsts"] = StsChanging.new
+          # 状態を変更する
+          sts["wetsts"] = StsChanging.new
 
-				else
-					# 濡れていなければ御礼だけ言う
-					saythanks(mention, words, true)
-				end
+        else
+          # 濡れていなければ御礼だけ言う
+          saythanks(mention, words, true)
+        end
 
-				delmentions << mention.id
-			end
-		end
+        delmentions << mention.id
+      end
+    end
 
-		# メンション配列から、返信済みのものを削除する
-		mentions.delete_if do |mention|
-			delmentions.include?(mention.id)
-		end
-	end
+    # メンション配列から、返信済みのものを削除する
+    mentions.delete_if do |mention|
+      delmentions.include?(mention.id)
+    end
+  end
 
-	# 就寝起床処理
-	def checksleep(sts)
-		if DEBUG_NO_SLEEP then
-			return
-		end
+  # 就寝起床処理
+  def checksleep(sts)
+    if DEBUG_NO_SLEEP then
+      return
+    end
 
-		# その日の起床・睡眠時刻を設定
-		if sts["wakeuptime"].to_date < Date.today || sts["gotobedtime"].to_date < Date.today then
-			day = Time.now
+    # その日の起床・睡眠時刻を設定
+    if sts["wakeuptime"].to_date < Date.today || sts["gotobedtime"].to_date < Date.today then
+      day = Time.now
 
-			# 起床はランダムな8時台
-			sts["wakeuptime"] = Time.local(day.year, day.month, day.day, 8, rand(60),0)
+      # 起床はランダムな8時台
+      sts["wakeuptime"] = Time.local(day.year, day.month, day.day, 8, rand(60),0)
 
-			# 就寝はランダムな21時台
-			sts["gotobedtime"] = Time.local(day.year, day.month, day.day, 21, rand(60),0)
-		end
+      # 就寝はランダムな21時台
+      sts["gotobedtime"] = Time.local(day.year, day.month, day.day, 21, rand(60),0)
+    end
 
-		# 時刻に従った状態変更
-		if (Time.now > sts["gotobedtime"]) && (! sts["wetsts"].sleeping?) then
-			# 寝る
-			sts["wetsts"] = StsGotoSleep.new
-			return
-		end
+    # 時刻に従った状態変更
+    if (Time.now > sts["gotobedtime"]) && (! sts["wetsts"].sleeping?) then
+      # 寝る
+      sts["wetsts"] = StsGotoSleep.new
+      return
+    end
 
-		if (Time.now < sts["wakeuptime"]) && (! sts["wetsts"].sleeping?) then
-			# 寝る
-			sts["wetsts"] = StsGotoSleep.new
-			return
-		end
+    if (Time.now < sts["wakeuptime"]) && (! sts["wetsts"].sleeping?) then
+      # 寝る
+      sts["wetsts"] = StsGotoSleep.new
+      return
+    end
 
-		if (Time.now > sts["gotobedtime"]) && sts["wetsts"].sleeping? then
-			# 継続して寝る
-			return
-		end
+    if (Time.now > sts["gotobedtime"]) && sts["wetsts"].sleeping? then
+      # 継続して寝る
+      return
+    end
 
-		if (Time.now < sts["wakeuptime"]) && sts["wetsts"].sleeping? then
-			# 継続して寝る
-			return
-		end
+    if (Time.now < sts["wakeuptime"]) && sts["wetsts"].sleeping? then
+      # 継続して寝る
+      return
+    end
 
-		if (Time.now > sts["wakeuptime"]) && sts["wetsts"].sleeping? then
-			# 起きる
-			sts["wetsts"] = StsWakeup.new
-			return
-		end
-	end
+    if (Time.now > sts["wakeuptime"]) && sts["wetsts"].sleeping? then
+      # 起きる
+      sts["wetsts"] = StsWakeup.new
+      return
+    end
+  end
 
-	# 行動セット呼び出し
-	def process(words, sts)
-		# 尿意増加
-		increase(sts)
+  # 行動セット呼び出し
+  def process(words, sts)
+    # 尿意増加
+    increase(sts)
 
-		# 呼びかけに応答
+    # 呼びかけに応答
 
-		# 状態変更
+    # 状態変更
 
-		# 自発的発言
-		speak(words)
-	end
+    # 自発的発言
+    speak(words)
+  end
 
-	# 自身のクラス名を返す
-	def name()
-		return self.class.to_s
-	end
+  # 自身のクラス名を返す
+  def name()
+    return self.class.to_s
+  end
 
-	# おむつが濡れているかを返す
-	def diaperwet?()
-		return false
-	end
+  # おむつが濡れているかを返す
+  def diaperwet?()
+    return false
+  end
 
-	# 寝ているかを返す
-	def sleeping?()
-		return false
-	end
+  # 寝ているかを返す
+  def sleeping?()
+    return false
+  end
 end
 
 # おむつが乾いた状態
 class StsFine < StsBase
-	# 初期化
-	def initialize()
-		@modename = "fine"
-	end
+  # 初期化
+  def initialize()
+    @modename = "fine"
+  end
 
-	def process(words, sts)
-		# 尿意増加
-		increase(sts)
+  def process(words, sts)
+    # 尿意増加
+    increase(sts)
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 確率で自発的発言
-		if talkrand() then
-			sts["wetsts"].speak(words)
-		end
+    # 確率で自発的発言
+    if talkrand() then
+      sts["wetsts"].speak(words)
+    end
 
-		# 状態変更
-		if(sts["volume"] >= ENDURANCEBORDER) then
-			# 尿意が一定以上ならがまん状態にする
-			sts["wetsts"] = StsEndurance.new
+    # 状態変更
+    if(sts["volume"] >= ENDURANCEBORDER) then
+      # 尿意が一定以上ならがまん状態にする
+      sts["wetsts"] = StsEndurance.new
 
-			# 状態変更時は強制発言
-			sts["wetsts"].speak(words)
-		else
-			# 変更が無ければ睡眠判定
-			checksleep(sts)
-		end
-	end
+      # 状態変更時は強制発言
+      sts["wetsts"].speak(words)
+    else
+      # 変更が無ければ睡眠判定
+      checksleep(sts)
+    end
+  end
 end
 
 # がまん状態
 class StsEndurance < StsBase
-	# 初期化
-	def initialize()
-		@modename = "endurance"
-	end
+  # 初期化
+  def initialize()
+    @modename = "endurance"
+  end
 
-	def process(words, sts)
-		# 尿意増加
-		increase(sts)
+  def process(words, sts)
+    # 尿意増加
+    increase(sts)
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 確率で自発的発言
-		if talkrand() then
-			sts["wetsts"].speak(words)
-		end
+    # 確率で自発的発言
+    if talkrand() then
+      sts["wetsts"].speak(words)
+    end
 
-		# 状態変更
-		if(sts["volume"] >= LEAKBORDER) then
-			# 尿意が一定以上ならお漏らし状態にする
-			sts["wetsts"] = StsLeak.new
-		else
-			# 変更が無ければ睡眠判定
-			checksleep(sts)
-		end
-	end
+    # 状態変更
+    if(sts["volume"] >= LEAKBORDER) then
+      # 尿意が一定以上ならお漏らし状態にする
+      sts["wetsts"] = StsLeak.new
+    else
+      # 変更が無ければ睡眠判定
+      checksleep(sts)
+    end
+  end
 end
 
 # お漏らし状態
 class StsLeak < StsBase
-	# 初期化
-	def initialize()
-		@modename = "leak"
-	end
+  # 初期化
+  def initialize()
+    @modename = "leak"
+  end
 
-	def process(words, sts)
-		# 漏らした時刻を更新する
-		sts["leaktime"] = Time.now
+  def process(words, sts)
+    # 漏らした時刻を更新する
+    sts["leaktime"] = Time.now
 
-		# 尿意をリセットする
-		sts["volume"] = 0
+    # 尿意をリセットする
+    sts["volume"] = 0
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+    # 自発的発言
+    sts["wetsts"].speak(words)
 
-		# 状態変更
-		sts["wetsts"] = StsWet.new
-	end
+    # 状態変更
+    sts["wetsts"] = StsWet.new
+  end
 end
 
 # 濡れた状態
 class StsWet < StsBase
-	# 初期化
-	def initialize()
-		@modename = "wet"
-	end
+  # 初期化
+  def initialize()
+    @modename = "wet"
+  end
 
-	def process(words, sts)
-		# メンション取得
-		mentions = getnewmentions(sts)
+  def process(words, sts)
+    # メンション取得
+    mentions = getnewmentions(sts)
 
-		# おむつ交換判定
-		diaperchangecheck(sts, words, mentions)
+    # おむつ交換判定
+    diaperchangecheck(sts, words, mentions)
 
-		# 呼びかけに反応する
-		answertomentions(words, sts, mentions)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answertomentions(words, sts, mentions)
+    updatelastmentiontime(sts)
 
-		# おむつを交換済みなら処理を終了する
-		if ! diaperwet? then
-			return
-		end
+    # おむつを交換済みなら処理を終了する
+    if ! diaperwet? then
+      return
+    end
 
-		# 尿意増加
-		increase(sts)
+    # 尿意増加
+    increase(sts)
 
-		# 確率で自発的発言
-		if talkrand() then
-			sts["wetsts"].speak(words)
-		end
+    # 確率で自発的発言
+    if talkrand() then
+      sts["wetsts"].speak(words)
+    end
 
-		# 状態変更
-		if(sts["volume"] >= LEAKBORDER) then
-			# 尿意が一定以上ならお漏らし状態にする
-			sts["wetsts"] = StsLeak.new
-		else
-			# 変更が無ければ睡眠判定
-			checksleep(sts)
-		end
-	end
+    # 状態変更
+    if(sts["volume"] >= LEAKBORDER) then
+      # 尿意が一定以上ならお漏らし状態にする
+      sts["wetsts"] = StsLeak.new
+    else
+      # 変更が無ければ睡眠判定
+      checksleep(sts)
+    end
+  end
 
-	# おむつが濡れているかを返す
-	def diaperwet?()
-		return true
-	end
+  # おむつが濡れているかを返す
+  def diaperwet?()
+    return true
+  end
 end
 
 # おむつ交換中状態
 class StsChanging < StsBase
-	# 初期化
-	def initialize()
-		@modename = "changing"
-	end
+  # 初期化
+  def initialize()
+    @modename = "changing"
+  end
 
-	def process(words, sts)
-		# 尿意増加
-		increase(sts)
+  def process(words, sts)
+    # 尿意増加
+    increase(sts)
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+    # 自発的発言
+    sts["wetsts"].speak(words)
 
-		# 状態変更
-		sts["wetsts"] = StsFine.new
-	end
+    # 状態変更
+    sts["wetsts"] = StsFine.new
+  end
 end
 
 # 寝入り状態
 class StsGotoSleep < StsBase
-	# 初期化
-	def initialize()
-		@modename = "gotosleep"
-	end
+  # 初期化
+  def initialize()
+    @modename = "gotosleep"
+  end
 
-	def process(words, sts)
-		# 自発的発言
-		sts["wetsts"].speak(words)
+  def process(words, sts)
+    # 自発的発言
+    sts["wetsts"].speak(words)
 
-		# 状態変更
-		sts["wetsts"] = StsSleeping.new
-	end
+    # 状態変更
+    sts["wetsts"] = StsSleeping.new
+  end
 
-	# 寝ているかを返す
-	def sleeping?()
-		return true
-	end
+  # 寝ているかを返す
+  def sleeping?()
+    return true
+  end
 end
 
 # 睡眠中状態
 class StsSleeping < StsBase
-	# 初期化
-	def initialize()
-		@modename = "sleeping"
-	end
+  # 初期化
+  def initialize()
+    @modename = "sleeping"
+  end
 
-	def process(words, sts)
-		# 確率で自発的発言
-		if talkrand() then
-			sts["wetsts"].speak(words)
-		end
+  def process(words, sts)
+    # 確率で自発的発言
+    if talkrand() then
+      sts["wetsts"].speak(words)
+    end
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 睡眠判定
-		checksleep(sts)
-	end
+    # 睡眠判定
+    checksleep(sts)
+  end
 
-	# 寝ているかを返す
-	def sleeping?()
-		return true
-	end
+  # 寝ているかを返す
+  def sleeping?()
+    return true
+  end
 end
 
 # 目覚め状態
 class StsWakeup < StsBase
-	# 初期化
-	def initialize()
-		@modename = "wakeup"
-	end
+  # 初期化
+  def initialize()
+    @modename = "wakeup"
+  end
 
-	def process(words, sts)
-		# 漏らした時刻を更新する
-		sts["leaktime"] = Time.now
+  def process(words, sts)
+    # 漏らした時刻を更新する
+    sts["leaktime"] = Time.now
 
-		# 尿意をリセットする
-		sts["volume"] = 0
+    # 尿意をリセットする
+    sts["volume"] = 0
 
-		# 呼びかけに反応する
-		answer(words, sts)
-		updatelastmentiontime(sts)
+    # 呼びかけに反応する
+    answer(words, sts)
+    updatelastmentiontime(sts)
 
-		# 自発的発言
-		sts["wetsts"].speak(words)
+    # 自発的発言
+    sts["wetsts"].speak(words)
 
-		# 状態変更
-		# 必ずおねしょする
-		sts["wetsts"] = StsWet.new
-	end
+    # 状態変更
+    # 必ずおねしょする
+    sts["wetsts"] = StsWet.new
+  end
 
-	# 寝ているかを返す
-	def sleeping?()
-		return true
-	end
+  # 寝ているかを返す
+  def sleeping?()
+    return true
+  end
 end
 
 class DiaperChangeBot
-	# 尿意レベル
-	def volume
-		return @status["volume"]
-	end
+  # 尿意レベル
+  def volume
+    return @status["volume"]
+  end
 
-	# 尿状態の文字列を返す
-	def wetsts
-		return @status["wetsts"].name
-	end
+  # 尿状態の文字列を返す
+  def wetsts
+    return @status["wetsts"].name
+  end
 
-	def initialize(stsfile = nil, wordsfile = nil)
-		# 現在の状態を設定
-		if stsfile == nil || !File.exist?(stsfile) then
-			@status = {
-				"volume" => 0,
-				"wetsts" => StsFine.new,
-				"leaktime" => Time.now,
-				"lastmentiontime" => Time.now,
-				"wakeuptime" => Time.now - (60 * 60 * 24),
-				"gotobedtime" => Time.now - (60 * 60 * 24)
-			}
-		else
-			File.open(stsfile, "r") do |f|
-				f.flock(File::LOCK_SH)
-				@status = YAML.load(f.read)
-			end
-		end
+  def initialize(stsfile = nil, wordsfile = nil)
+    # 現在の状態を設定
+    if stsfile == nil || !File.exist?(stsfile) then
+      @status = {
+        "volume" => 0,
+        "wetsts" => StsFine.new,
+        "leaktime" => Time.now,
+        "lastmentiontime" => Time.now,
+        "wakeuptime" => Time.now - (60 * 60 * 24),
+        "gotobedtime" => Time.now - (60 * 60 * 24)
+      }
+    else
+      File.open(stsfile, "r") do |f|
+        f.flock(File::LOCK_SH)
+        @status = YAML.load(f.read)
+      end
+    end
 
-		# 応答パターン設定
-		if wordsfile == nil || !File.exist?(wordsfile) then
-			@words = {
-				"autonomous" => {
-					"fine" => [
-						"まだ大丈夫。",
-						"こんにちは。"
-					],
-					"endurance" => [
-						"うう、おしっこでそう……",
-						"にゅーん……",
-						"なんだかおちつかないー",
-						"漏っちゃうー"
-					],
-					"leak" => [
-						"（しょろろろ……）あ、出ちゃった……"
-					],
-					"wet" => [
-						"うう、おむつがびしょびしょー"
-					],
-					"changing" => [
-						"新しいおむつ～♪"
-					],
-					"gotosleep" => [
-						"そろそろ寝る時間。おやすみ～"
-					],
-					"sleeping" => [
-						"すー……すー……"
-					],
-					"wakeup" => [
-						"おはよう～"
-					]
-				},
-				"answerset" => {
-					"fine" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"endurance" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"leak" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"wet" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"changing" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"gotosleep" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"sleeping" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					],
-					"wakeup" => [
-						{"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
-						{"words" => ["default"] , "answers" => ["にゃーん。"]}
-					]
-				},
-				"changeset" => {
-					"thanks" => [
-						"わあ、おむつ替えありがとう！"
-					],
-					"late" => [
-						"ありがとうね、でももう交換してもらっちゃった。"
-					]
-				}
-			}
-		else
-			@words = YAML.load_file(wordsfile)
-		end
-	end
+    # 応答パターン設定
+    if wordsfile == nil || !File.exist?(wordsfile) then
+      @words = {
+        "autonomous" => {
+        "fine" => [
+        "まだ大丈夫。",
+        "こんにちは。"
+        ],
+        "endurance" => [
+        "うう、おしっこでそう……",
+        "にゅーん……",
+        "なんだかおちつかないー",
+        "漏っちゃうー"
+        ],
+        "leak" => [
+        "（しょろろろ……）あ、出ちゃった……"
+        ],
+        "wet" => [
+        "うう、おむつがびしょびしょー"
+        ],
+        "changing" => [
+        "新しいおむつ～♪"
+        ],
+        "gotosleep" => [
+        "そろそろ寝る時間。おやすみ～"
+        ],
+        "sleeping" => [
+        "すー……すー……"
+        ],
+        "wakeup" => [
+        "おはよう～"
+        ]
+        },
+        "answerset" => {
+        "fine" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "endurance" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "leak" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "wet" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "changing" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "gotosleep" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "sleeping" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ],
+        "wakeup" => [
+        {"words" => ["好き"] , "answers" => ["ぼくも好き！"]},
+        {"words" => ["default"] , "answers" => ["にゃーん。"]}
+        ]
+        },
+        "changeset" => {
+        "thanks" => [
+        "わあ、おむつ替えありがとう！"
+        ],
+        "late" => [
+        "ありがとうね、でももう交換してもらっちゃった。"
+        ]
+        }
+      }
+    else
+      @words = YAML.load_file(wordsfile)
+    end
+  end
 
-	# 応答パターン設定
-	def setwords(words)
-		@words = words
-	end
+  # 応答パターン設定
+  def setwords(words)
+    @words = words
+  end
 
-	# セーブする。
-	def save(stsfile)
-		File.open(stsfile, File::RDWR|File::CREAT) do |yml|
-			yml.flock(File::LOCK_EX)
-			yml.rewind
-			YAML.dump(@status, yml)
-			yml.flush
-			yml.truncate(yml.pos)
-		end
-	end
+  # セーブする。
+  def save(stsfile)
+    File.open(stsfile, File::RDWR|File::CREAT) do |yml|
+      yml.flock(File::LOCK_EX)
+      yml.rewind
+      YAML.dump(@status, yml)
+      yml.flush
+      yml.truncate(yml.pos)
+    end
+  end
 
-	#一回分の活動
-	def process()
-		@status["wetsts"].process(@words, @status)
-	end
+  #一回分の活動
+  def process()
+    @status["wetsts"].process(@words, @status)
+  end
 end
 
 # 自身を実行した場合にのみ起動
 if __FILE__ == $PROGRAM_NAME then
-	# 設定ファイル名指定
-	savefile = $scriptdir + "/botsave.yml"
-	wordsfile = $scriptdir + "/wordfile.yml"
+  # 設定ファイル名指定
+  savefile = $scriptdir + "/botsave.yml"
+  wordsfile = $scriptdir + "/wordfile.yml"
 
-	# コマンドライン解析
-	args = cmdline
+  # コマンドライン解析
+  args = cmdline
 
-	# 必ずつぶやくモード
-	if(args[:force]) then
+  # 必ずつぶやくモード
+  if(args[:force]) then
     $always_tweet_flag = true
-	end
+  end
 
-	# botのインスタンス生成
-	botobj = DiaperChangeBot.new(savefile, wordsfile)
+  # botのインスタンス生成
+  botobj = DiaperChangeBot.new(savefile, wordsfile)
 
-	# bot処理実行
-	botobj.process
+  # bot処理実行
+  botobj.process
 
-	# 現状をコンソールに出力
-	debugprint("現在の尿意：" + botobj.volume.to_s)
-	debugprint("現在の状態：" + botobj.wetsts)
+  # 現状をコンソールに出力
+  debugprint("現在の尿意：" + botobj.volume.to_s)
+  debugprint("現在の状態：" + botobj.wetsts)
 
-	# 状態をセーブ
-	botobj.save(savefile)
+  # 状態をセーブ
+  botobj.save(savefile)
 
 end
