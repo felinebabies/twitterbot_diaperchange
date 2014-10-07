@@ -1,10 +1,11 @@
 # coding: utf-8
 # おむつ交換Bot
-require 'yaml'
-require 'twitter'
+require 'bundler'
 require 'pp'
+require 'yaml'
 require 'optparse'
 require 'singleton'
+Bundler.require
 
 # 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
