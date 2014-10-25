@@ -5,7 +5,7 @@ class UserManager
   attr_reader :userdata
   def initialize(userDataFile)
     @userDataFile = userDataFile
-    
+
     # ユーザ情報ファイルの読み込み
     load
   end
