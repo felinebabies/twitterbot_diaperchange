@@ -1,5 +1,7 @@
 # coding: utf-8
 
+require 'yaml'
+
 # ユーザ管理クラス
 class UserManager
   attr_reader :userdata
