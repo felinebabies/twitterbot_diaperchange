@@ -42,7 +42,7 @@ describe UserManager do
         @usermanager
       end
 
-      it 'should save to test.yml and file exists' do
+      it 'should save to usermanagertest01.yml and file exists' do
         subject.save
         expect(File.exists?(@yml_file)).to eq true
       end
