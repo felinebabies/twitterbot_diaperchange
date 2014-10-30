@@ -43,6 +43,15 @@ describe UserManager do
         expect(subject.getuser(-9999)).to be_nil
       end
 
+      it 'get change point by id 0 to be 0' do
+        expect(subject.getchangepoint(0)).to eq 0
+      end
+
+      it 'add change point by id 0 and get change point to be 0' do
+        subject.addchangepoint(0, 1)
+        expect(subject.getchangepoint(0)).to eq 1
+      end
+
       context 'update userdata' do
         subject do
           @usermanager
@@ -50,7 +59,7 @@ describe UserManager do
 
         it 'update by valid id to be true' do
           userobj = {
-            "id" => 0,
+            "id" => 132561779,
             "diaperchangepoint" => 1,
             "calledname" => "",
             "interestpoint" => 0,
