@@ -3,6 +3,7 @@
 require 'pp'
 require 'yaml'
 require 'optparse'
+require 'singleton'
 
 require_relative 'bottwitterclient'
 require_relative 'usermanager'
