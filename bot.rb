@@ -4,7 +4,7 @@ require 'pp'
 require 'yaml'
 require 'optparse'
 
-require_relative 'twitterclient'
+require_relative 'bottwitterclient'
 require_relative 'usermanager'
 
 # 当スクリプトファイルの所在
