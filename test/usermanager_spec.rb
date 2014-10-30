@@ -34,6 +34,31 @@ describe UserManager do
       it 'userdata to be not empty' do
         expect(subject.userdata).not_to be_empty
       end
+
+      it 'get userdata by valid id to be not nil' do
+        expect(subject.getuser(0)).not_to be_nil
+      end
+
+      it 'get userdata by invalid id to be nil' do
+        expect(subject.getuser(-9999)).to be_nil
+      end
+
+      context 'update userdata' do
+        subject do
+          @usermanager
+        end
+
+        it 'update by valid id to be true' do
+          userobj = {
+            "id" => 0,
+            "diaperchangepoint" => 1,
+            "calledname" => "",
+            "interestpoint" => 0,
+            "displayname" => ""
+          }
+          expect(subject.update(userobj)).to eq true
+        end
+      end
     end
 
     context 'saving' do
@@ -42,9 +67,11 @@ describe UserManager do
         @usermanager
       end
 
-      it 'should save to usermanagertest01.yml and file exists' do
+      it 'should save to yaml and load from yaml' do
         subject.save
         expect(File.exists?(@yml_file)).to eq true
+	@yml_file2 = UserManager.new(@yml_file)
+	expect(@yml_file2.userdata).not_to be_empty
       end
     end
 
