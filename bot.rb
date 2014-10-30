@@ -1,6 +1,5 @@
 # coding: utf-8
 # おむつ交換Bot
-require 'bundler'
 require 'pp'
 require 'yaml'
 require 'optparse'
