@@ -4,9 +4,8 @@ require 'bundler'
 require 'pp'
 require 'yaml'
 require 'optparse'
-require 'singleton'
-Bundler.require
 
+require_relative 'twitterclient'
 require_relative 'usermanager'
 
 # 当スクリプトファイルの所在
@@ -34,30 +33,6 @@ def cmdline
   end
 
   return args
-end
-
-# シングルトンのtwitterクライアントクラス
-class BotTwitterClient
-  include Singleton
-
-  attr_accessor :client
-  def initialize
-    tsettings = YAML.load_file($scriptdir + "/tsettings.yml")
-
-    @client = Twitter::REST::Client.new do |config|
-      config.consumer_key        = tsettings["consumer_key"]
-      config.consumer_secret     = tsettings["consumer_secret"]
-      config.access_token        = tsettings["access_token"]
-      config.access_token_secret = tsettings["access_token_secret"]
-    end
-  end
-end
-
-# twitterクライアントを生成する
-def createclient()
-  twitterclient = BotTwitterClient.instance
-
-  return twitterclient.client
 end
 
 # ランダムなつぶやきを行うかの乱数判定

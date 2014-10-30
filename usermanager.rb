@@ -1,6 +1,7 @@
 # coding: utf-8
 
 require 'yaml'
+require_relative 'bottwitterclient'
 
 # ユーザ管理クラス
 class UserManager
@@ -64,7 +65,7 @@ class UserManager
       uid = userobj["id"]
     else
       warn("update:引数は正しいユーザオブジェクトではありません。")
-      return
+      return false
     end
 
     objindex = @userdata.index do |user|
@@ -84,6 +85,7 @@ class UserManager
     updatedispname(userobj)
 
     @userdata[objindex] = userobj.dup
+    return true
   end
 
   # おむつ交換ポイントを取得する
