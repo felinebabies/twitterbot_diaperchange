@@ -1,5 +1,6 @@
 ﻿# coding: utf-8
 
+require 'logger'
 require_relative '../usermanager'
 
 describe UserManager do
@@ -7,6 +8,10 @@ describe UserManager do
     @tmp_dir = File.join( File.dirname(__FILE__), 'tmp')
     FileUtils.mkdir(@tmp_dir)  if !File.exists?(@tmp_dir)
     @yml_file = File.join(@tmp_dir, 'usermanagertest01.yml')
+
+    #loggerの設定
+    @logger = Logger.new(STDERR)
+    @logger.level = Logger::WARN
   end
 
   after do
@@ -14,7 +19,7 @@ describe UserManager do
   end
 
   context 'with new filename "usermanagertest01.yml"' do
-    before { @usermanager = UserManager.new(@yml_file) }
+    before { @usermanager = UserManager.new(@yml_file, @logger) }
     subject { @usermanager }
 
     it 'does not exists "usermanagertest01.yml"' do
@@ -79,8 +84,8 @@ describe UserManager do
       it 'should save to yaml and load from yaml' do
         subject.save
         expect(File.exists?(@yml_file)).to eq true
-	@yml_file2 = UserManager.new(@yml_file)
-	expect(@yml_file2.userdata).not_to be_empty
+        @yml_file2 = UserManager.new(@yml_file, @logger)
+      	expect(@yml_file2.userdata).not_to be_empty
       end
     end
 

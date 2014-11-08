@@ -1,13 +1,17 @@
 # coding: utf-8
 
 require 'yaml'
+require 'logger'
 require_relative 'bottwitterclient'
 
 # ユーザ管理クラス
 class UserManager
   attr_reader :userdata
-  def initialize(userDataFile)
+  def initialize(userDataFile, logger = nil)
     @userDataFile = userDataFile
+
+    #loggerの設定
+    @logger = logger || Logger.new(STDERR)
 
     # ユーザ情報ファイルの読み込み
     load
@@ -20,8 +24,10 @@ class UserManager
         f.flock(File::LOCK_SH)
         @userdata = YAML.load(f.read)
       end
+      @logger.info("Userdata file [#{@userDataFile}] loaded")
     else
       @userdata = []
+      @logger.info("Userdata file [#{@userDataFile}] not exists")
     end
   end
 
@@ -34,6 +40,7 @@ class UserManager
       yml.flush
       yml.truncate(yml.pos)
     end
+    @logger.info("Userdata saved [#{@userDataFile}]")
   end
 
   # ユーザを追加
@@ -47,6 +54,7 @@ class UserManager
     }
 
     @userdata << userobj
+    @logger.info("Userdata [id: #{userid}] added")
   end
 
   # ユーザオブジェクトを取得、存在しなければnilを返す
@@ -64,7 +72,7 @@ class UserManager
     if userobj.has_key?("id") then
       uid = userobj["id"]
     else
-      warn("update:引数は正しいユーザオブジェクトではありません。")
+      @logger.warn("update:User object is not valid")
       return false
     end
 
@@ -85,6 +93,7 @@ class UserManager
     updatedispname(userobj)
 
     @userdata[objindex] = userobj.dup
+    @logger.info("Userdata [id: #{uid}] updated")
     return true
   end
 
@@ -92,7 +101,7 @@ class UserManager
   def getchangepoint(userid)
     user = getuser(userid)
     if user == nil then
-      warn("getchangepoint:指定のユーザが存在しませんでした。" + userid.to_s)
+      @logger.warn("getchangepoint:User not exists " + userid.to_s)
       return 0
     end
 
@@ -127,7 +136,7 @@ class UserManager
 
       userdata["displayname"] = userobj.name
     rescue
-      warn(userdata["id"].to_s + "のユーザ情報を取得できませんでした。")
+      @logger.warn("Can't get user data [" + userdata["id"].to_s + "]")
     end
   end
 
