@@ -15,7 +15,7 @@ describe UserManager do
   end
 
   after do
-    FileUtils.rm(@yml_file)  if File.exists?(@yml_file)
+    FileUtils.rm(@yml_file) if File.exists?(@yml_file)
   end
 
   context 'with new filename "usermanagertest01.yml"' do

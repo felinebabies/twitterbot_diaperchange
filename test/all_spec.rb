@@ -2,3 +2,4 @@
 
 require_relative 'bottwitterclient_spec.rb'
 require_relative 'usermanager_spec.rb'
+require_relative 'stsbase_spec.rb'
