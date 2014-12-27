@@ -5,10 +5,10 @@ require 'yaml'
 require 'optparse'
 require 'singleton'
 
-require_relative 'bottwitterclient'
-require_relative 'usermanager'
-require_relative 'replace'
-require_relative 'status'
+require_relative 'lib/bottwitterclient'
+require_relative 'lib/usermanager'
+require_relative 'lib/replace'
+require_relative 'lib/status'
 
 # 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
@@ -52,7 +52,7 @@ class ChangeCommands
 
   attr_reader :commands
   def initialize
-    @commands = YAML.load_file($scriptdir + "/changecommands.yml")
+    @commands = YAML.load_file($scriptdir + "/savedata/changecommands.yml")
   end
 end
 
@@ -67,12 +67,15 @@ class DiaperChangeBot
     return @status["wetsts"].name
   end
 
-  def initialize(stsfile = nil, wordsfile = nil)
+  def initialize(stsfile = nil, wordsfile = nil, logger = nil)
+    #loggerの設定
+    @logger = logger || Logger.new(STDERR)
+
     # 現在の状態を設定
     if stsfile == nil || !File.exist?(stsfile) then
       @status = {
         "volume" => 0,
-        "wetsts" => StsFine.new,
+        "wetsts" => StsFine.new(logger),
         "leaktime" => Time.now,
         "lastmentiontime" => Time.now,
         "wakeuptime" => Time.now - (60 * 60 * 24),
@@ -83,6 +86,8 @@ class DiaperChangeBot
         f.flock(File::LOCK_SH)
         @status = YAML.load(f.read)
       end
+
+      @status["wetsts"].setlogger(@logger)
     end
 
     # 応答パターン設定
@@ -173,6 +178,10 @@ class DiaperChangeBot
 
   # セーブする。
   def save(stsfile)
+    #logger のインスタンスはセーブしない
+    loggerInstance = @status["wetsts"].logger
+    @status["wetsts"].setlogger(nil)
+
     File.open(stsfile, File::RDWR|File::CREAT) do |yml|
       yml.flock(File::LOCK_EX)
       yml.rewind
@@ -180,6 +189,9 @@ class DiaperChangeBot
       yml.flush
       yml.truncate(yml.pos)
     end
+
+    #loggerのインスタンスを戻す
+    @status["wetsts"].setlogger(loggerInstance)
   end
 
   #一回分の活動
@@ -191,8 +203,8 @@ end
 # 自身を実行した場合にのみ起動
 if __FILE__ == $PROGRAM_NAME then
   # 設定ファイル名指定
-  savefile = $scriptdir + "/botsave.yml"
-  wordsfile = $scriptdir + "/wordfile.yml"
+  savefile = $scriptdir + "/savedata/botsave.yml"
+  wordsfile = $scriptdir + "/savedata/wordfile.yml"
 
   # コマンドライン解析
   args = cmdline
@@ -202,8 +214,11 @@ if __FILE__ == $PROGRAM_NAME then
     $always_tweet_flag = true
   end
 
+  # loggerのインスタンスを作成
+  logger = Logger.new('log/botlog.log', 0, 5 * 1024 * 1024)
+
   # botのインスタンス生成
-  botobj = DiaperChangeBot.new(savefile, wordsfile)
+  botobj = DiaperChangeBot.new(savefile, wordsfile, logger)
 
   # bot処理実行
   botobj.process

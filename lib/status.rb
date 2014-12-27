@@ -26,7 +26,7 @@ class StsFine < StsBase
     # 状態変更
     if(sts["volume"] >= ENDURANCEBORDER) then
       # 尿意が一定以上ならがまん状態にする
-      sts["wetsts"] = StsEndurance.new
+      sts["wetsts"] = StsEndurance.new(@logger)
 
       # 状態変更時は強制発言
       sts["wetsts"].speak(words)
@@ -40,7 +40,8 @@ end
 # がまん状態
 class StsEndurance < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "endurance"
   end
 
@@ -60,7 +61,7 @@ class StsEndurance < StsBase
     # 状態変更
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
-      sts["wetsts"] = StsLeak.new
+      sts["wetsts"] = StsLeak.new(@logger)
     else
       # 変更が無ければ睡眠判定
       checksleep(sts)
@@ -71,7 +72,8 @@ end
 # お漏らし状態
 class StsLeak < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "leak"
   end
 
@@ -90,14 +92,15 @@ class StsLeak < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsWet.new
+    sts["wetsts"] = StsWet.new(@logger)
   end
 end
 
 # 濡れた状態
 class StsWet < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "wet"
   end
 
@@ -128,7 +131,7 @@ class StsWet < StsBase
     # 状態変更
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
-      sts["wetsts"] = StsLeak.new
+      sts["wetsts"] = StsLeak.new(@logger)
     else
       # 変更が無ければ睡眠判定
       checksleep(sts)
@@ -144,7 +147,8 @@ end
 # おむつ交換中状態
 class StsChanging < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "changing"
   end
 
@@ -160,14 +164,15 @@ class StsChanging < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsFine.new
+    sts["wetsts"] = StsFine.new(@logger)
   end
 end
 
 # 寝入り状態
 class StsGotoSleep < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "gotosleep"
   end
 
@@ -176,7 +181,7 @@ class StsGotoSleep < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsSleeping.new
+    sts["wetsts"] = StsSleeping.new(@logger)
   end
 
   # 寝ているかを返す
@@ -188,7 +193,8 @@ end
 # 睡眠中状態
 class StsSleeping < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "sleeping"
   end
 
@@ -215,7 +221,8 @@ end
 # 目覚め状態
 class StsWakeup < StsBase
   # 初期化
-  def initialize()
+  def initialize(logger = nil)
+    super logger
     @modename = "wakeup"
   end
 
@@ -235,7 +242,7 @@ class StsWakeup < StsBase
 
     # 状態変更
     # 必ずおねしょする
-    sts["wetsts"] = StsWet.new
+    sts["wetsts"] = StsWet.new(@logger)
   end
 
   # 寝ているかを返す

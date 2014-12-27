@@ -1,7 +1,7 @@
 ﻿# coding: utf-8
 
 require 'logger'
-require_relative '../usermanager'
+require_relative '../lib/usermanager'
 
 describe UserManager do
   before do

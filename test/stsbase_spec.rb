@@ -1,8 +1,8 @@
 ﻿# coding: utf-8
 require 'logger'
 
-require_relative '../stsbase'
-require_relative '../bottwitterclient'
+require_relative '../lib/stsbase'
+require_relative '../lib/bottwitterclient'
 
 describe StsBase do
   before do
@@ -31,7 +31,7 @@ describe StsBase do
     before do
       @tweetid = nil
       root_dir = File.join( File.dirname(__FILE__), '..')
-      @wordsfile = File.join( root_dir, 'wordfile.yml')
+      @wordsfile = File.join( root_dir, '/savedata/wordfile.yml')
     end
 
     after do
@@ -58,13 +58,13 @@ describe StsBase do
     end
   end
 
-  it 'get new mentions with empty argument and sould return nil' do
+  it 'get new mentions with empty argument and should return nil' do
     sts = {}
 
     expect(subject.getnewmentions(sts)).to eq nil
   end
 
-  it 'get new mentions with valid argument and sould return not nil' do
+  it 'get new mentions with valid argument and should return not nil' do
     sts = {
       "volume" => 0,
       "wetsts" => nil,
@@ -75,6 +75,39 @@ describe StsBase do
     }
 
     expect(subject.getnewmentions(sts)).not_to eq nil
+  end
+
+  it 'update get last mentions time without newestmention and should time updated' do
+    sts = {
+      "volume" => 0,
+      "wetsts" => nil,
+      "leaktime" => Time.now,
+      "lastmentiontime" => Time.now - (60 * 60 * 24),
+      "wakeuptime" => Time.now - (60 * 60 * 24),
+      "gotobedtime" => Time.now - (60 * 60 * 24)
+    }
+
+    oldtime = sts['lastmentiontime']
+
+    subject.updatelastmentiontime(sts)
+
+    expect(sts['lastmentiontime']).to be > oldtime
+  end
+
+  it 'update get last mentions time with newestmention and should time updated' do
+    sts = {
+      "volume" => 0,
+      "wetsts" => nil,
+      "leaktime" => Time.now,
+      "lastmentiontime" => Time.now - (60 * 60 * 24),
+      "wakeuptime" => Time.now - (60 * 60 * 24),
+      "gotobedtime" => Time.now - (60 * 60 * 24),
+      "newestmention" => Time.now
+    }
+
+    subject.updatelastmentiontime(sts)
+
+    expect(sts['lastmentiontime']).to eq sts["newestmention"]
   end
 
 end
