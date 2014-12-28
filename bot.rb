@@ -224,22 +224,25 @@ if __FILE__ == $PROGRAM_NAME then
 
   logger.info("Bot script start")
 
-  # botのインスタンス生成
-  botobj = DiaperChangeBot.new(savefile, wordsfile, logger)
+  begin
+    # botのインスタンス生成
+    botobj = DiaperChangeBot.new(savefile, wordsfile, logger)
 
-  # bot処理実行
-  botobj.process
+    # bot処理実行
+    botobj.process
 
-  # 現状をコンソールに出力
-  debugprint("現在の尿意：" + botobj.volume.to_s)
-  debugprint("現在の状態：" + botobj.wetsts)
+    # 現状をコンソールに出力
+    debugprint("現在の尿意：" + botobj.volume.to_s)
+    debugprint("現在の状態：" + botobj.wetsts)
 
-  logger.info("Current volume: #{botobj.volume.to_s}")
-  logger.info("Current status: #{botobj.wetsts}")
+    logger.info("Current volume: #{botobj.volume.to_s}")
+    logger.info("Current status: #{botobj.wetsts}")
 
-  # 状態をセーブ
-  botobj.save(savefile)
-
+    # 状態をセーブ
+    botobj.save(savefile)
+  rescue => ex
+    logger.error("Inner error: #{ex.message}")
+  end
 
   logger.info("Bot script finish")
 end
