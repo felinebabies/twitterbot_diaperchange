@@ -62,6 +62,8 @@ class StsEndurance < StsBase
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
       sts["wetsts"] = StsLeak.new(@logger)
+
+      @logger.info('Status changed to Leak')
     else
       # 変更が無ければ睡眠判定
       checksleep(sts)
@@ -93,6 +95,8 @@ class StsLeak < StsBase
 
     # 状態変更
     sts["wetsts"] = StsWet.new(@logger)
+
+    @logger.info('Status changed to Wet')
   end
 end
 
@@ -132,6 +136,8 @@ class StsWet < StsBase
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
       sts["wetsts"] = StsLeak.new(@logger)
+
+      @logger.info('Status changed to Leak')
     else
       # 変更が無ければ睡眠判定
       checksleep(sts)
@@ -165,6 +171,8 @@ class StsChanging < StsBase
 
     # 状態変更
     sts["wetsts"] = StsFine.new(@logger)
+
+    @logger.info('Status changed to Fine')
   end
 end
 
@@ -182,6 +190,8 @@ class StsGotoSleep < StsBase
 
     # 状態変更
     sts["wetsts"] = StsSleeping.new(@logger)
+
+    @logger.info('Status changed to Sleeping')
   end
 
   # 寝ているかを返す
@@ -243,6 +253,8 @@ class StsWakeup < StsBase
     # 状態変更
     # 必ずおねしょする
     sts["wetsts"] = StsWet.new(@logger)
+
+    @logger.info('Wakeup and status changed to Wet')
   end
 
   # 寝ているかを返す

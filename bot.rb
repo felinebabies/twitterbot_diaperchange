@@ -30,7 +30,7 @@ def cmdline
   args = {}
 
   OptionParser.new do |parser|
-    parser.on('-f', '--f', '必ずつぶやく') {|v| args[:force] = v}
+    parser.on('-f', '--force', '必ずつぶやく') {|v| args[:force] = v}
     parser.parse!(ARGV)
   end
 
@@ -81,10 +81,14 @@ class DiaperChangeBot
         "wakeuptime" => Time.now - (60 * 60 * 24),
         "gotobedtime" => Time.now - (60 * 60 * 24)
       }
+
+      @logger.debug('Creating default status object')
     else
       File.open(stsfile, "r") do |f|
         f.flock(File::LOCK_SH)
         @status = YAML.load(f.read)
+
+        @logger.debug('Creating status object from file')
       end
 
       @status["wetsts"].setlogger(@logger)
@@ -216,6 +220,9 @@ if __FILE__ == $PROGRAM_NAME then
 
   # loggerのインスタンスを作成
   logger = Logger.new('log/botlog.log', 0, 5 * 1024 * 1024)
+  logger.level = Logger::INFO
+
+  logger.info("Bot script start")
 
   # botのインスタンス生成
   botobj = DiaperChangeBot.new(savefile, wordsfile, logger)
@@ -230,4 +237,6 @@ if __FILE__ == $PROGRAM_NAME then
   # 状態をセーブ
   botobj.save(savefile)
 
+
+  logger.info("Bot script finish")
 end

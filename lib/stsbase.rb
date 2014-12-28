@@ -6,7 +6,7 @@ require_relative 'replace'
 
 class StsBase
   attr_reader :logger
-  
+
   # 尿意の最大増加値
   MAXINCREASEVAL = 10
 
@@ -62,7 +62,7 @@ class StsBase
     word = replacespecialmessage(word, nil, 140)
 
     # ログにしゃべった内容を記録
-    @logger.info(word)
+    @logger.info("Random talk: #{word}")
 
     # tweetする
     client = createclient
@@ -103,7 +103,10 @@ class StsBase
       a.created_at <=> b.created_at
     end
 
-    @logger.info(newlist.pretty_inspect)
+    # メンションをログに記録する
+    newlist.each do |mention|
+      @logger.info("mention: #{mention.created_at}: #{mention.text}")
+    end
 
     if ! mentions.empty? then
       sts["newestmention"] = mentions.last.created_at
@@ -161,7 +164,7 @@ class StsBase
       debugprint("answerstrlen=#{answerstr.size}")
 
       # ログにしゃべった内容を記録
-      @logger.info(word)
+      @logger.info("Answer to mention: #{tweetstr}")
 
       # ツイートする
       client.update(tweetstr, :in_reply_to_status_id => mention.id)
@@ -201,6 +204,9 @@ class StsBase
     tweetstr = "@" + objuser.screen_name + " " + answerstr
     client.update(tweetstr, :in_reply_to_status_id => mention.id)
 
+    # ログにしゃべった内容を記録
+    @logger.info("Thanks to diaper change: #{tweetstr}")
+
     # コンソールにしゃべった内容を表示
     debugprint(tweetstr)
   end
@@ -218,7 +224,7 @@ class StsBase
           saythanks(mention, words)
 
           # 替えてくれた人にポイントをつける
-          manager = UserManager.new($scriptdir + "/savedata/userdata.yml")
+          manager = UserManager.new($scriptdir + "/savedata/userdata.yml", @logger)
           manager.addchangepoint(mention.user.id, 1)
           manager.save
 
