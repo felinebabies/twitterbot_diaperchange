@@ -16,7 +16,7 @@ class ReplaceChangeRanking < ReplaceBase
   def process(str, mention, maxlen)
     if str.include?(KEYWORD) then
       # おむつ交換ランキングを取得する
-      manager = UserManager.new($scriptdir + "/userdata.yml")
+      manager = UserManager.new($scriptdir + "/savedata/userdata.yml")
       userdatas = manager.userdata
 
       if userdatas.empty? then
