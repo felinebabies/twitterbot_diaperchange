@@ -234,6 +234,9 @@ if __FILE__ == $PROGRAM_NAME then
   debugprint("現在の尿意：" + botobj.volume.to_s)
   debugprint("現在の状態：" + botobj.wetsts)
 
+  logger.info("Current volume: #{botobj.volume.to_s}")
+  logger.info("Current status: #{botobj.wetsts}")
+
   # 状態をセーブ
   botobj.save(savefile)
 
