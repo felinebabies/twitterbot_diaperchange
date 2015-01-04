@@ -9,9 +9,13 @@ describe StsBase do
     #loggerの設定
     @logger = Logger.new(STDERR)
     @logger.level = Logger::WARN
+
+    #ユーザ情報ファイルのパス
+    tmpdirpath = File.join( File.dirname(__FILE__), 'tmp')
+    @userDataFilePath = File.join( tmpdirpath, 'userdata.yml')
   end
 
-  subject { StsBase.new(@logger) }
+  subject { StsBase.new(@userDataFilePath, @logger) }
 
   it 'increase with invalid argument and sould return nil' do
     status = {}

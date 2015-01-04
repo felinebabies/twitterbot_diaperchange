@@ -5,8 +5,8 @@ require_relative 'stsbase'
 # おむつが乾いた状態
 class StsFine < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "fine"
   end
 
@@ -26,7 +26,7 @@ class StsFine < StsBase
     # 状態変更
     if(sts["volume"] >= ENDURANCEBORDER) then
       # 尿意が一定以上ならがまん状態にする
-      sts["wetsts"] = StsEndurance.new(@logger)
+      sts["wetsts"] = StsEndurance.new(@userDataFilePath, @logger)
 
       # 状態変更時は強制発言
       sts["wetsts"].speak(words)
@@ -40,8 +40,8 @@ end
 # がまん状態
 class StsEndurance < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "endurance"
   end
 
@@ -61,7 +61,7 @@ class StsEndurance < StsBase
     # 状態変更
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
-      sts["wetsts"] = StsLeak.new(@logger)
+      sts["wetsts"] = StsLeak.new(@userDataFilePath, @logger)
 
       @logger.info('Status changed to Leak')
     else
@@ -74,8 +74,8 @@ end
 # お漏らし状態
 class StsLeak < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "leak"
   end
 
@@ -94,7 +94,7 @@ class StsLeak < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsWet.new(@logger)
+    sts["wetsts"] = StsWet.new(@userDataFilePath, @logger)
 
     @logger.info('Status changed to Wet')
   end
@@ -103,8 +103,8 @@ end
 # 濡れた状態
 class StsWet < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "wet"
   end
 
@@ -135,7 +135,7 @@ class StsWet < StsBase
     # 状態変更
     if(sts["volume"] >= LEAKBORDER) then
       # 尿意が一定以上ならお漏らし状態にする
-      sts["wetsts"] = StsLeak.new(@logger)
+      sts["wetsts"] = StsLeak.new(@userDataFilePath, @logger)
 
       @logger.info('Status changed to Leak')
     else
@@ -153,8 +153,8 @@ end
 # おむつ交換中状態
 class StsChanging < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "changing"
   end
 
@@ -170,7 +170,7 @@ class StsChanging < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsFine.new(@logger)
+    sts["wetsts"] = StsFine.new(@userDataFilePath, @logger)
 
     @logger.info('Status changed to Fine')
   end
@@ -179,8 +179,8 @@ end
 # 寝入り状態
 class StsGotoSleep < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "gotosleep"
   end
 
@@ -189,7 +189,7 @@ class StsGotoSleep < StsBase
     sts["wetsts"].speak(words)
 
     # 状態変更
-    sts["wetsts"] = StsSleeping.new(@logger)
+    sts["wetsts"] = StsSleeping.new(@userDataFilePath, @logger)
 
     @logger.info('Status changed to Sleeping')
   end
@@ -203,8 +203,8 @@ end
 # 睡眠中状態
 class StsSleeping < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "sleeping"
   end
 
@@ -231,8 +231,8 @@ end
 # 目覚め状態
 class StsWakeup < StsBase
   # 初期化
-  def initialize(logger = nil)
-    super logger
+  def initialize(userDataFilePath, logger = nil)
+    super userDataFilePath, logger
     @modename = "wakeup"
   end
 
@@ -252,7 +252,7 @@ class StsWakeup < StsBase
 
     # 状態変更
     # 必ずおねしょする
-    sts["wetsts"] = StsWet.new(@logger)
+    sts["wetsts"] = StsWet.new(@userDataFilePath, @logger)
 
     @logger.info('Wakeup and status changed to Wet')
   end

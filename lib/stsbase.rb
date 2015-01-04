@@ -6,6 +6,7 @@ require_relative 'replace'
 
 class StsBase
   attr_reader :logger
+  attr_accessor :userDataFilePath
 
   # 尿意の最大増加値
   MAXINCREASEVAL = 10
@@ -16,8 +17,10 @@ class StsBase
   # お漏らしの閾値
   LEAKBORDER = 330
   # 初期化
-  def initialize(logger = nil)
+  def initialize(userDataFilePath, logger = nil)
     @modename = "fine"
+
+    @userDataFilePath = userDataFilePath
 
     #loggerの設定
     @logger = logger || Logger.new(STDERR)
@@ -59,7 +62,7 @@ class StsBase
     word = words['autonomous'][@modename].sample
 
     # 文字列の置き換えを行う
-    word = replacespecialmessage(word, nil, 140)
+    word = replacespecialmessage(word, nil, 140, @userDataFilePath, @logger)
 
     # ログにしゃべった内容を記録
     @logger.info("Random talk: #{word}")
@@ -143,7 +146,7 @@ class StsBase
     end
 
     # 文字列の置き換えを行う
-    answertext = replacespecialmessage(answertext, mention, maxlen)
+    answertext = replacespecialmessage(answertext, mention, maxlen, @userDataFilePath, @logger)
 
     return answertext
   end
@@ -224,12 +227,12 @@ class StsBase
           saythanks(mention, words)
 
           # 替えてくれた人にポイントをつける
-          manager = UserManager.new($scriptdir + "/savedata/userdata.yml", @logger)
+          manager = UserManager.new(@userDataFilePath, @logger)
           manager.addchangepoint(mention.user.id, 1)
           manager.save
 
           # 状態を変更する
-          sts["wetsts"] = StsChanging.new
+          sts["wetsts"] = StsChanging.new(@userDataFilePath, @logger)
 
         else
           # 濡れていなければ御礼だけ言う
@@ -266,13 +269,13 @@ class StsBase
     # 時刻に従った状態変更
     if (Time.now > sts["gotobedtime"]) && (! sts["wetsts"].sleeping?) then
       # 寝る
-      sts["wetsts"] = StsGotoSleep.new
+      sts["wetsts"] = StsGotoSleep.new(@userDataFilePath, @logger)
       return
     end
 
     if (Time.now < sts["wakeuptime"]) && (! sts["wetsts"].sleeping?) then
       # 寝る
-      sts["wetsts"] = StsGotoSleep.new
+      sts["wetsts"] = StsGotoSleep.new(@userDataFilePath, @logger)
       return
     end
 
@@ -288,13 +291,13 @@ class StsBase
 
     if (Time.now > sts["wakeuptime"]) && sts["wetsts"].sleeping? then
       # 起きる
-      sts["wetsts"] = StsWakeup.new
+      sts["wetsts"] = StsWakeup.new(@userDataFilePath, @logger)
       return
     end
   end
 
   # 行動セット呼び出し
-  def process(words, sts)
+  def process(words, sts, userDataPath)
     # 尿意増加
     increase(sts)
 

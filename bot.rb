@@ -13,6 +13,9 @@ require_relative 'lib/status'
 # 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
 
+# セーブデータ用ディレクトリの所在
+$savedir = File.join($scriptdir, 'savedata/')
+
 # 一日中寝ないモード
 DEBUG_NO_SLEEP = false
 
@@ -52,7 +55,7 @@ class ChangeCommands
 
   attr_reader :commands
   def initialize
-    @commands = YAML.load_file($scriptdir + "/savedata/changecommands.yml")
+    @commands = YAML.load_file(File.join($savedir, "changecommands.yml"))
   end
 end
 
@@ -75,7 +78,7 @@ class DiaperChangeBot
     if stsfile == nil || !File.exist?(stsfile) then
       @status = {
         "volume" => 0,
-        "wetsts" => StsFine.new(logger),
+        "wetsts" => StsFine.new(File.join($savedir, 'userdata.yml'), logger),
         "leaktime" => Time.now,
         "lastmentiontime" => Time.now,
         "wakeuptime" => Time.now - (60 * 60 * 24),
@@ -89,6 +92,9 @@ class DiaperChangeBot
         @status = YAML.load(f.read)
 
         @logger.debug('Creating status object from file')
+
+        #ユーザデータファイルのパスを再設定する
+        @status["wetsts"].userDataFilePath = File.join($savedir, 'userdata.yml')
       end
 
       @status["wetsts"].setlogger(@logger)
@@ -207,8 +213,8 @@ end
 # 自身を実行した場合にのみ起動
 if __FILE__ == $PROGRAM_NAME then
   # 設定ファイル名指定
-  savefile = $scriptdir + "/savedata/botsave.yml"
-  wordsfile = $scriptdir + "/savedata/wordfile.yml"
+  savefile = File.join($savedir, "botsave.yml")
+  wordsfile = File.join($savedir, "wordfile.yml")
 
   # コマンドライン解析
   args = cmdline
@@ -242,6 +248,8 @@ if __FILE__ == $PROGRAM_NAME then
     botobj.save(savefile)
   rescue => ex
     logger.error("Inner error: #{ex.message}")
+    logger.error("Back trace: #{ex.backtrace}")
+    pp ex.backtrace
   end
 
   logger.info("Bot script finish")

@@ -13,10 +13,18 @@ end
 # ランキング置換
 class ReplaceChangeRanking < ReplaceBase
   KEYWORD = '<showranking>'
+
+  def initialize(userDataFilePath, logger = nil)
+    @userDataFilePath = userDataFilePath
+
+    #loggerの設定
+    @logger = logger || Logger.new(STDERR)
+  end
+
   def process(str, mention, maxlen)
     if str.include?(KEYWORD) then
       # おむつ交換ランキングを取得する
-      manager = UserManager.new($scriptdir + "/savedata/userdata.yml")
+      manager = UserManager.new(@userDataFilePath, @logger)
       userdatas = manager.userdata
 
       if userdatas.empty? then
@@ -102,9 +110,9 @@ class ReplaceChangeRanking < ReplaceBase
 end
 
 # 特殊なメッセージを置換する
-def replacespecialmessage(tweetstr, mention, maxlen)
+def replacespecialmessage(tweetstr, mention, maxlen, userDataFilePath, logger = nil)
   commandarr = [
-    ReplaceChangeRanking.new
+    ReplaceChangeRanking.new(userDataFilePath, logger)
   ]
 
   commandarr.each do |command|
