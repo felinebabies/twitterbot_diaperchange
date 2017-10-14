@@ -11,7 +11,7 @@ module DiaperChangeBot
   $savedir = File.join($scriptdir, 'savedata/')
 
   # 一日中寝ないモード
-  DEBUG_NO_SLEEP = false
+  DEBUG_NO_SLEEP = true
 
   # ランダムなつぶやきを必ず実行するフラグ
   $always_tweet_flag = false

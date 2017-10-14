@@ -253,6 +253,12 @@ module DiaperChangeBot
     # 就寝起床処理
     def checksleep(sts)
       if DEBUG_NO_SLEEP then
+        #寝ていたら起きる
+        if sts["wetsts"].sleeping? then
+          sts["wetsts"] = StsWakeup.new(@userDataFilePath, @logger)
+        end
+
+        #起きていれば何もしない
         return
       end
 
