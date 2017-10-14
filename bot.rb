@@ -1,5 +1,8 @@
 # coding: utf-8
 # おむつ交換Bot
+require 'bundler'
+Bundler.require
+
 require 'pp'
 require 'yaml'
 require 'optparse'
@@ -9,6 +12,7 @@ require_relative 'lib/bottwitterclient'
 require_relative 'lib/usermanager'
 require_relative 'lib/replace'
 require_relative 'lib/status'
+require_relative 'lib/commands'
 
 # 当スクリプトファイルの所在
 $scriptdir = File.expand_path(File.dirname(__FILE__))
@@ -59,7 +63,7 @@ class ChangeCommands
   end
 end
 
-class DiaperChangeBot
+class Bot
   # 尿意レベル
   def volume
     return @status["volume"]
@@ -212,45 +216,5 @@ end
 
 # 自身を実行した場合にのみ起動
 if __FILE__ == $PROGRAM_NAME then
-  # 設定ファイル名指定
-  savefile = File.join($savedir, "botsave.yml")
-  wordsfile = File.join($savedir, "wordfile.yml")
-
-  # コマンドライン解析
-  args = cmdline
-
-  # 必ずつぶやくモード
-  if(args[:force]) then
-    $always_tweet_flag = true
-  end
-
-  # loggerのインスタンスを作成
-  logger = Logger.new('log/botlog.log', 0, 5 * 1024 * 1024)
-  logger.level = Logger::INFO
-
-  logger.info("Bot script start")
-
-  begin
-    # botのインスタンス生成
-    botobj = DiaperChangeBot.new(savefile, wordsfile, logger)
-
-    # bot処理実行
-    botobj.process
-
-    # 現状をコンソールに出力
-    debugprint("現在の尿意：" + botobj.volume.to_s)
-    debugprint("現在の状態：" + botobj.wetsts)
-
-    logger.info("Current volume: #{botobj.volume.to_s}")
-    logger.info("Current status: #{botobj.wetsts}")
-
-    # 状態をセーブ
-    botobj.save(savefile)
-  rescue => ex
-    logger.error("Inner error: #{ex.message}")
-    logger.error("Back trace: #{ex.backtrace}")
-    pp ex.backtrace
-  end
-
-  logger.info("Bot script finish")
+  DiaperChangeBot::Commands.start(ARGV)
 end
