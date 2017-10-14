@@ -7,7 +7,7 @@ require_relative 'utils'
 
 module DiaperChangeBot
   class Commands < Thor
-    option :force, :type => :boolean
+    option :force, :type => :boolean, :aliases => "-f", :desc => "強制的につぶやかせる"
     desc "exec", "botの通常動作を一回分起動する"
     def exec
       # 設定ファイル名指定
