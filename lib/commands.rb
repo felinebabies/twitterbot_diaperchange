@@ -50,5 +50,11 @@ module DiaperChangeBot
 
       logger.info("Bot script finish")
     end
+
+    desc "showchangeword", "おむつ交換用キーワードの一覧を表示する"
+    def showchangeword
+      keywordlist = ChangeCommands.instance.commands
+      puts keywordlist
+    end
   end
 end
