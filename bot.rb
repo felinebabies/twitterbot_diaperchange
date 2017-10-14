@@ -5,7 +5,6 @@ Bundler.require
 
 require 'pp'
 require 'yaml'
-require 'optparse'
 require 'singleton'
 
 require_relative 'lib/globals'
@@ -20,18 +19,6 @@ require_relative 'lib/bot'
 def debugprint(str)
   #puts (str.encode("CP932"))
   puts(str)
-end
-
-# コマンドラインオプション解析
-def cmdline
-  args = {}
-
-  OptionParser.new do |parser|
-    parser.on('-f', '--force', '必ずつぶやく') {|v| args[:force] = v}
-    parser.parse!(ARGV)
-  end
-
-  return args
 end
 
 # ランダムなつぶやきを行うかの乱数判定
