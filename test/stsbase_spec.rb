@@ -4,7 +4,7 @@ require 'logger'
 require_relative '../lib/stsbase'
 require_relative '../lib/bottwitterclient'
 
-describe StsBase do
+describe DiaperChangeBot::StsBase do
   before do
     #loggerの設定
     @logger = Logger.new(STDERR)
@@ -15,7 +15,7 @@ describe StsBase do
     @userDataFilePath = File.join( tmpdirpath, 'userdata.yml')
   end
 
-  subject { StsBase.new(@userDataFilePath, @logger) }
+  subject { DiaperChangeBot::StsBase.new(@userDataFilePath, @logger) }
 
   it 'increase with invalid argument and sould return nil' do
     status = {}
@@ -41,7 +41,7 @@ describe StsBase do
     after do
       unless @tweetid == nil then
         sleep(5)
-        createclient.destroy_status(@tweetid)
+        DiaperChangeBot::createclient.destroy_status(@tweetid)
       end
     end
 

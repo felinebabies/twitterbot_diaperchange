@@ -3,7 +3,7 @@
 require 'logger'
 require_relative '../lib/usermanager'
 
-describe UserManager do
+describe DiaperChangeBot::UserManager do
   before do
     @tmp_dir = File.join( File.dirname(__FILE__), 'tmp')
     FileUtils.mkdir(@tmp_dir)  if !File.exists?(@tmp_dir)
@@ -19,7 +19,7 @@ describe UserManager do
   end
 
   context 'with new filename "usermanagertest01.yml"' do
-    before { @usermanager = UserManager.new(@yml_file, @logger) }
+    before { @usermanager = DiaperChangeBot::UserManager.new(@yml_file, @logger) }
     subject { @usermanager }
 
     it 'does not exists "usermanagertest01.yml"' do
@@ -84,7 +84,7 @@ describe UserManager do
       it 'should save to yaml and load from yaml' do
         subject.save
         expect(File.exists?(@yml_file)).to eq true
-        @yml_file2 = UserManager.new(@yml_file, @logger)
+        @yml_file2 = DiaperChangeBot::UserManager.new(@yml_file, @logger)
       	expect(@yml_file2.userdata).not_to be_empty
       end
     end
