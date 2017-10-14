@@ -3,6 +3,8 @@
 require 'bundler'
 Bundler.require
 
+require_relative 'utils'
+
 module DiaperChangeBot
   class Commands < Thor
     option :force, :type => :boolean
@@ -14,7 +16,7 @@ module DiaperChangeBot
 
       # 必ずつぶやくモード
       if(options[:force]) then
-        debugprint("必ずつぶやくモードを設定しました。")
+        DiaperChangeBot::debugprint("必ずつぶやくモードを設定しました。")
         $always_tweet_flag = true
       end
 
@@ -32,8 +34,8 @@ module DiaperChangeBot
         botobj.process
 
         # 現状をコンソールに出力
-        debugprint("現在の尿意：" + botobj.volume.to_s)
-        debugprint("現在の状態：" + botobj.wetsts)
+        DiaperChangeBot::debugprint("現在の尿意：" + botobj.volume.to_s)
+        DiaperChangeBot::debugprint("現在の状態：" + botobj.wetsts)
 
         logger.info("Current volume: #{botobj.volume.to_s}")
         logger.info("Current status: #{botobj.wetsts}")

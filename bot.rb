@@ -7,6 +7,7 @@ require 'pp'
 require 'yaml'
 require 'singleton'
 
+require_relative 'lib/utils'
 require_relative 'lib/globals'
 require_relative 'lib/bottwitterclient'
 require_relative 'lib/usermanager'
@@ -14,21 +15,6 @@ require_relative 'lib/replace'
 require_relative 'lib/status'
 require_relative 'lib/commands'
 require_relative 'lib/bot'
-
-# デバッグ出力
-def debugprint(str)
-  #puts (str.encode("CP932"))
-  puts(str)
-end
-
-# ランダムなつぶやきを行うかの乱数判定
-def talkrand()
-  if($always_tweet_flag == true) then
-    return(true)
-  else
-    return(rand(20) == 0)
-  end
-end
 
 # おむつ交換コマンド管理クラス
 class ChangeCommands

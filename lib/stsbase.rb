@@ -1,6 +1,7 @@
 # coding: utf-8
 require 'logger'
 
+require_relative 'utils'
 require_relative 'bottwitterclient'
 require_relative 'replace'
 
@@ -67,6 +68,7 @@ module DiaperChangeBot
 
       # ログにしゃべった内容を記録
       @logger.info("Random talk: #{word}")
+      DiaperChangeBot::debugprint("Random talk: #{word}")
 
       # tweetする
       client = DiaperChangeBot::createclient
@@ -164,8 +166,8 @@ module DiaperChangeBot
 
         tweetstr = useridstr + answerstr
 
-        debugprint("maxlen=#{maxlen}")
-        debugprint("answerstrlen=#{answerstr.size}")
+        DiaperChangeBot::debugprint("maxlen=#{maxlen}")
+        DiaperChangeBot::debugprint("answerstrlen=#{answerstr.size}")
 
         # ログにしゃべった内容を記録
         @logger.info("Answer to mention: #{tweetstr}")
@@ -212,7 +214,7 @@ module DiaperChangeBot
       @logger.info("Thanks to diaper change: #{tweetstr}")
 
       # コンソールにしゃべった内容を表示
-      debugprint(tweetstr)
+      DiaperChangeBot::debugprint(tweetstr)
     end
 
     # おむつ交換判定を行う

@@ -1,5 +1,6 @@
 # coding: utf-8
 
+require_relative 'utils'
 require_relative 'stsbase'
 
 module DiaperChangeBot
@@ -20,7 +21,7 @@ module DiaperChangeBot
       updatelastmentiontime(sts)
 
       # 確率で自発的発言
-      if talkrand() then
+      if DiaperChangeBot::talkrand() then
         sts["wetsts"].speak(words)
       end
 
@@ -55,7 +56,7 @@ module DiaperChangeBot
       updatelastmentiontime(sts)
 
       # 確率で自発的発言
-      if talkrand() then
+      if DiaperChangeBot::talkrand() then
         sts["wetsts"].speak(words)
       end
 
@@ -129,7 +130,7 @@ module DiaperChangeBot
       increase(sts)
 
       # 確率で自発的発言
-      if talkrand() then
+      if DiaperChangeBot::talkrand() then
         sts["wetsts"].speak(words)
       end
 
@@ -211,7 +212,7 @@ module DiaperChangeBot
 
     def process(words, sts)
       # 確率で自発的発言
-      if talkrand() then
+      if DiaperChangeBot::talkrand() then
         sts["wetsts"].speak(words)
       end
 
