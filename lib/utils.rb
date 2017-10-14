@@ -1,5 +1,5 @@
 # coding: utf-8
-# bot陽ユーティリティ
+# bot用ユーティリティ
 require 'bundler'
 Bundler.require
 

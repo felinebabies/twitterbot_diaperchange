@@ -4,6 +4,7 @@ require 'logger'
 require_relative 'utils'
 require_relative 'bottwitterclient'
 require_relative 'replace'
+require_relative 'changecommands'
 
 module DiaperChangeBot
   class StsBase
