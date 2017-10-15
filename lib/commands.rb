@@ -67,7 +67,11 @@ module DiaperChangeBot
 
       manager = UserManager.new(userdatafile, logger)
 
-      manager.userdata.each do |item|
+      userranking = manager.userdata.sort do |a,b|
+        b["diaperchangepoint"] <=> a["diaperchangepoint"]
+      end
+
+      userranking.each do |item|
         puts "displayname:#{item["displayname"]} score:#{item["diaperchangepoint"]}"
       end
       logger.info("output #{manager.userdata.count} users")
