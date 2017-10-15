@@ -21,7 +21,7 @@ module DiaperChangeBot
     # ユーザ情報ファイルの読み込み
     def load
       if File.exist?(@userDataFile) then
-        File.open(@userDataFile, "r") do |f|
+        File.open(@userDataFile, "r:utf-8") do |f|
           f.flock(File::LOCK_SH)
           @userdata = YAML.load(f.read)
         end

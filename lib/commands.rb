@@ -56,5 +56,23 @@ module DiaperChangeBot
       keywordlist = ChangeCommands.instance.commands
       puts keywordlist
     end
+
+    desc "ranking", "おむつ交換してくれた人の一覧を表示する"
+    def ranking
+      userdatafile = File.join($savedir, 'userdata.yml')
+      logger = Logger.new('log/botlog.log', 0, 5 * 1024 * 1024)
+      logger.level = Logger::INFO
+
+      logger.info("Bot script:ranking start")
+
+      manager = UserManager.new(userdatafile, logger)
+
+      manager.userdata.each do |item|
+        puts "displayname:#{item["displayname"]} score:#{item["diaperchangepoint"]}"
+      end
+      logger.info("output #{manager.userdata.count} users")
+
+      logger.info("Bot script:ranking finish")
+    end
   end
 end
